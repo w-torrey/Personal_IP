@@ -4,6 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
+from database import save_results, get_or_create_watchlist, get_new_alerts
+
+
+
 
 app = FastAPI(
     title="IndexPulse API",
@@ -86,3 +90,19 @@ def search_get(
         raise HTTPException(status_code=500, detail=result.get("error", "SERP API call failed"))
 
     return result
+
+
+@app.post("/monitor")
+def monitor(request: DorkRequest):
+    """Runs a dork and saves results to the database."""
+    watchlist_id = get_or_create_watchlist(request.person, request.organization)
+    result = run_dork(request.person, request.organization, request.hours, request.num_results)
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail="SerpApi call failed")
+    saved = save_results(watchlist_id, result["results"])
+    return {"watchlist_id": watchlist_id, "results": result["results"], "db": saved}
+
+@app.get("/alerts")
+def alerts():
+    """Returns all new unseen alerts from the database."""
+    return get_new_alerts()
