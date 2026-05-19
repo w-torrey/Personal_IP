@@ -104,3 +104,17 @@ def get_new_alerts():
         }
         for row in rows
     ]
+
+
+def get_all_watchlists():
+    """
+    Returns all watchlists from the database.
+    """
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT id, person, organization FROM watchlists"))
+        rows = result.fetchall()
+
+    return [
+        {"id": row[0], "person": row[1], "organization": row[2]}
+        for row in rows
+    ]

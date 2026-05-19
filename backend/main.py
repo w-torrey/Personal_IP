@@ -5,6 +5,21 @@ from typing import Optional
 from dork_engine import run_dork
 from database import save_results, get_or_create_watchlist, get_new_alerts
 
+from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
+
+from contextlib import asynccontextmanager
+
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    start_scheduler(interval_hours=24)
+    yield
+    # Shutdown
+    stop_scheduler()
+
 app = FastAPI(
     title="IndexPulse API",
     description="OSINT Google Dork Monitoring Engine",
@@ -24,6 +39,20 @@ class DorkRequest(BaseModel):
     organization: str
     hours: Optional[int] = 24
     num_results: Optional[int] = 10
+
+
+
+@app.post("/run-now")
+def run_now():
+    """Manually trigger all watchlists to run immediately."""
+    run_all_watchlists()
+    return {"status": "done"}
+
+@app.post("/watchlist")
+def create_watchlist(request: DorkRequest):
+    """Add a new watchlist target."""
+    watchlist_id = get_or_create_watchlist(request.person, request.organization)
+    return {"watchlist_id": watchlist_id, "person": request.person, "organization": request.organization}
 
 @app.get("/")
 def root():
