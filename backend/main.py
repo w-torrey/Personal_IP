@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
 from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 import os
 
 @asynccontextmanager
@@ -25,7 +25,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://100.65.81.57:8000",
+        "http://10.0.0.214:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,10 +42,6 @@ class DorkRequest(BaseModel):
     hours: Optional[int] = 24
     num_results: Optional[int] = 10
     category: Optional[str] = "Uncategorized"
-
-@app.get("/")
-def root():
-    return {"status": "IndexPulse is running"}
 
 @app.get("/search")
 def search(person: str, organization: str, hours: int = 24, num_results: int = 10):
@@ -77,7 +78,6 @@ def run_now():
     return {"status": "done"}
 
 frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
-
 app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
 
 @app.get("/{full_path:path}")
