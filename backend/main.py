@@ -6,6 +6,9 @@ from typing import Optional
 from dork_engine import run_dork
 from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -72,3 +75,11 @@ def create_watchlist(request: DorkRequest):
 def run_now():
     run_all_watchlists()
     return {"status": "done"}
+
+frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
+
+app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+
+@app.get("/{full_path:path}")
+def serve_frontend(full_path: str):
+    return FileResponse(os.path.join(frontend_dist, "index.html"))
