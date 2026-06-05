@@ -49,29 +49,20 @@ def save_results(watchlist_id: int, results: list):
     return {"saved": saved, "skipped": skipped}
 
 
-def get_or_create_watchlist(person: str, organization: str) -> int:
-    """
-    Gets existing watchlist ID or creates a new one.
-    Returns the watchlist ID.
-    """
+def get_or_create_watchlist(person: str, organization: str, category: str = "Uncategorized") -> int:
     with engine.connect() as conn:
         result = conn.execute(text("""
             SELECT id FROM watchlists
             WHERE person = :person AND organization = :organization
         """), {"person": person, "organization": organization})
-
         row = result.fetchone()
-
         if row:
             return row[0]
-
-        # Create new watchlist
         result = conn.execute(text("""
-            INSERT INTO watchlists (person, organization)
-            VALUES (:person, :organization)
+            INSERT INTO watchlists (person, organization, category)
+            VALUES (:person, :organization, :category)
             RETURNING id
-        """), {"person": person, "organization": organization})
-
+        """), {"person": person, "organization": organization, "category": category})
         conn.commit()
         return result.fetchone()[0]
 
@@ -107,14 +98,10 @@ def get_new_alerts():
 
 
 def get_all_watchlists():
-    """
-    Returns all watchlists from the database.
-    """
     with engine.connect() as conn:
-        result = conn.execute(text("SELECT id, person, organization FROM watchlists"))
+        result = conn.execute(text("SELECT id, person, organization, category FROM watchlists"))
         rows = result.fetchall()
-
     return [
-        {"id": row[0], "person": row[1], "organization": row[2]}
+        {"id": row[0], "person": row[1], "organization": row[2], "category": row[3]}
         for row in rows
     ]
