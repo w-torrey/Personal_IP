@@ -1,0 +1,29 @@
+name: Deploy to Omen
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest code
+        run: |
+          cd /home/ipuser/IndexPulse
+          git pull origin main
+
+      - name: Build frontend
+        run: |
+          cd /home/ipuser/IndexPulse/frontend
+          npm install
+          npm run build
+
+      - name: Restart uvicorn
+        run: |
+          pkill -f "uvicorn main:app" || true
+          sleep 2
+          cd /home/ipuser/IndexPulse/backend
+          source /home/ipuser/IndexPulse/venv/bin/activate
+          nohup /home/ipuser/IndexPulse/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 >> /home/ipuser/IndexPulse/deploy.log 2>&1 &

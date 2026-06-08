@@ -68,3 +68,84 @@ Traceback (most recent call last):
   File "/home/ipuser/IndexPulse/backend/main.py", line 1, in <module>
     from fastapi import FastAPI, HTTPException, Query
 ModuleNotFoundError: No module named 'fastapi'
+INFO:     Started server process [3219723]
+INFO:     Waiting for application startup.
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:apscheduler.scheduler:Added job "run_all_watchlists" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:scheduler:Scheduler started — running every 24 hours
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     100.67.143.117:52330 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52330 - "GET /assets/index-DEIX3ec7.js HTTP/1.1" 304 Not Modified
+INFO:     100.67.143.117:52331 - "GET /assets/index-Dlyf7hF6.css HTTP/1.1" 304 Not Modified
+INFO:     100.67.143.117:52331 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52330 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52918 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52918 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52919 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52918 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52919 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52918 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:apscheduler.scheduler:Scheduler has been shut down
+INFO:scheduler:Scheduler stopped
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3219723]
+INFO:     Started server process [3223982]
+INFO:     Waiting for application startup.
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:apscheduler.scheduler:Added job "run_all_watchlists" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:scheduler:Scheduler started — running every 24 hours
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     100.67.143.117:52924 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52925 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     100.67.143.117:52924 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     100.67.143.117:57529 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:57529 - "GET /assets/index-DEIX3ec7.js HTTP/1.1" 304 Not Modified
+INFO:     100.67.143.117:57530 - "GET /assets/index-Dlyf7hF6.css HTTP/1.1" 304 Not Modified
+INFO:     100.67.143.117:57530 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     100.67.143.117:57529 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:apscheduler.scheduler:Scheduler has been shut down
+INFO:scheduler:Scheduler stopped
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3223982]
+INFO:     Started server process [663084]
+INFO:     Waiting for application startup.
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:apscheduler.scheduler:Added job "run_all_watchlists" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:scheduler:Scheduler started — running every 24 hours
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:apscheduler.scheduler:Scheduler has been shut down
+INFO:scheduler:Scheduler stopped
+INFO:     Application shutdown complete.
+INFO:     Finished server process [663084]
+INFO:     Started server process [727838]
+INFO:     Waiting for application startup.
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:apscheduler.scheduler:Added job "run_all_watchlists" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:scheduler:Scheduler started — running every 24 hours
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     100.67.143.117:51032 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:51034 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     100.67.143.117:51033 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     100.67.143.117:54725 - "GET /alerts HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     100.67.143.117:54729 - "GET /watchlists HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     100.67.143.117:54737 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:54737 - "GET /assets/index-CkIeNCHf.js HTTP/1.1" 200 OK
+INFO:     100.67.143.117:54737 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     100.67.143.117:54738 - "GET /watchlists HTTP/1.1" 200 OK
