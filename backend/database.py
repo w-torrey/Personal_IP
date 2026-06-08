@@ -73,7 +73,7 @@ def get_new_alerts():
     """
     with engine.connect() as conn:
         result = conn.execute(text("""
-            SELECT r.id, w.person, w.organization, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at
+            SELECT r.id, w.person, w.organization, w.category, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at
             FROM results r
             JOIN watchlists w ON r.watchlist_id = w.id
             WHERE r.is_new = TRUE
