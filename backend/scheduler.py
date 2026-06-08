@@ -32,9 +32,9 @@ def run_all_watchlists():
     logger.info("Scheduler run complete.")
 
 def start_scheduler(interval_hours: int = 24):
-    scheduler.add_job(run_all_watchlists, "interval", hours=interval_hours, id="dork_job")
+    scheduler.add_job(run_all_watchlists, "cron", hour=20, minute=0, id="dork_job")
     scheduler.start()
-    logger.info(f"Scheduler started — running every {interval_hours} hours")
+    logger.info("Scheduler started — running daily at 8:00 PM ET")
 
 def stop_scheduler():
     scheduler.shutdown()
