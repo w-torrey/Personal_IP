@@ -3,6 +3,10 @@ import hashlib
 import subprocess
 from fastapi import FastAPI, Request, HTTPException
 import uvicorn
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -12,11 +16,17 @@ DEPLOY_SCRIPT = "/home/ipuser/IndexPulse/deploy.sh"
 @app.post("/webhook")
 async def webhook(request: Request):
     signature = request.headers.get("X-Hub-Signature-256")
+    logger.info(f"Received signature: {signature}")
+    
     if not signature:
         raise HTTPException(status_code=403, detail="No signature")
 
     body = await request.body()
-    expected = "sha256=" + hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+    mac = hmac.new(SECRET.encode(), body, hashlib.sha256)
+    expected = "sha256=" + mac.hexdigest()
+    
+    logger.info(f"Expected signature: {expected}")
+    logger.info(f"Match: {hmac.compare_digest(signature, expected)}")
 
     if not hmac.compare_digest(signature, expected):
         raise HTTPException(status_code=403, detail="Invalid signature")
