@@ -167,3 +167,9 @@ INFO:     100.67.143.117:62547 - "GET / HTTP/1.1" 200 OK
 INFO:     100.67.143.117:62547 - "GET /assets/index-DT6jlztJ.js HTTP/1.1" 200 OK
 INFO:     100.67.143.117:62549 - "GET /watchlists HTTP/1.1" 200 OK
 INFO:     100.67.143.117:62547 - "GET /alerts HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:apscheduler.scheduler:Scheduler has been shut down
+INFO:scheduler:Scheduler stopped
+INFO:     Application shutdown complete.
+INFO:     Finished server process [751071]
