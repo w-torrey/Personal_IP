@@ -82,17 +82,18 @@ def get_new_alerts():
         rows = result.fetchall()
 
     return [
-        {
-            "id": row[0],
-            "person": row[1],
-            "organization": row[2],
-            "title": row[3],
-            "link": row[4],
-            "snippet": row[5],
-            "source": row[6],
-            "date_found": row[7],
-            "fetched_at": str(row[8]),
-        }
+    {
+        "id": row[0],
+        "person": row[1],
+        "organization": row[2],
+        "category": row[3],
+        "title": row[4],
+        "link": row[5],
+        "snippet": row[6],
+        "source": row[7],
+        "date_found": row[8],
+        "fetched_at": str(row[9]),
+    }
         for row in rows
     ]
 
