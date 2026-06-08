@@ -52,7 +52,7 @@ def get_or_create_watchlist(label: str, person: str = None, organization: str = 
             return row[0]
         result = conn.execute(text("""
             INSERT INTO watchlists (label, person, organization, category, query_params)
-            VALUES (:label, :person, :organization, :category, :query_params::jsonb)
+            VALUES (:label, :person, :organization, :category, CAST(:query_params AS jsonb))
             RETURNING id
         """), {
             "label": label,
