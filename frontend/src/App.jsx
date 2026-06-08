@@ -372,7 +372,7 @@ export default function App() {
             <circle cx="12" cy="12" r="11" stroke="#7F77DD" strokeWidth="0.5" fill="none" opacity="0.25" />
           </svg>
           <span style={{ fontSize: 15, fontWeight: 700, color: "#e8e6ff", letterSpacing: "0.05em" }}>
-            INDEX<span style={{ color: "#7F77DD" }}>PULSE</span>
+            INDEX<span style={{ color: "#7F77DD" }}>PULSE v2</span>
           </span>
         </div>
 
