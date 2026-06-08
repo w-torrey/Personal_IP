@@ -23,6 +23,4 @@ jobs:
 
       - name: Restart uvicorn
         run: |
-          pkill -f "uvicorn main:app" || true
-          sleep 2
           sudo systemctl restart indexpulse
