@@ -8,10 +8,9 @@ load_dotenv()
 def build_query(
     person: str = None,
     organization: str = None,
-    keywords: list[str] = None,
-    include_sites: list[str] = None,
-    exclude_sites: list[str] = None,
-    filetype: str = None,
+    keywords: list = None,
+    include_sites: list = None,
+    exclude_sites: list = None,
 ) -> str:
     parts = []
 
@@ -28,8 +27,6 @@ def build_query(
     if exclude_sites:
         for s in exclude_sites:
             parts.append(f"-site:{s}")
-    if filetype:
-        parts.append(f"filetype:{filetype}")
 
     return " ".join(parts)
 
@@ -37,10 +34,9 @@ def build_query(
 def run_dork(
     person: str = None,
     organization: str = None,
-    keywords: list[str] = None,
-    include_sites: list[str] = None,
-    exclude_sites: list[str] = None,
-    filetype: str = None,
+    keywords: list = None,
+    include_sites: list = None,
+    exclude_sites: list = None,
     hours: int = 24,
     num_results: int = 10,
 ):
@@ -50,7 +46,6 @@ def run_dork(
         keywords=keywords,
         include_sites=include_sites,
         exclude_sites=exclude_sites,
-        filetype=filetype,
     )
 
     if not query.strip():
@@ -62,7 +57,7 @@ def run_dork(
         "google_domain": "google.com",
         "hl": "en",
         "gl": "us",
-        "tbs": f"qdr:h{hours}" if hours < 24 else "qdr:d",
+        "tbs": "qdr:d",
         "num": num_results,
         "api_key": os.getenv("SERPAPI_KEY")
     })
@@ -84,9 +79,5 @@ def run_dork(
 
 
 if __name__ == "__main__":
-    output = run_dork(
-        person="Ronald O'Hanley",
-        organization="State Street",
-        exclude_sites=["instagram.com", "linkedin.com"]
-    )
+    output = run_dork(keywords=["ransomware", "data breach"])
     print(json.dumps(output, indent=2))

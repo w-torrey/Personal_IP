@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="IndexPulse API",
     description="OSINT Google Dork Monitoring Engine",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan
 )
 
@@ -37,27 +37,78 @@ app.add_middleware(
 )
 
 class DorkRequest(BaseModel):
-    person: str
-    organization: str
+    label: Optional[str] = None
+    person: Optional[str] = None
+    organization: Optional[str] = None
+    keywords: Optional[list[str]] = None
+    include_sites: Optional[list[str]] = None
+    exclude_sites: Optional[list[str]] = None
     hours: Optional[int] = 24
     num_results: Optional[int] = 10
     category: Optional[str] = "Uncategorized"
 
-@app.get("/search")
-def search(person: str, organization: str, hours: int = 24, num_results: int = 10):
-    result = run_dork(person=person, organization=organization, hours=hours, num_results=num_results)
+def validate_request(request: DorkRequest):
+    if not any([request.person, request.organization, request.keywords, request.include_sites]):
+        raise HTTPException(
+            status_code=400,
+            detail="At least one of: person, organization, keywords, or include_sites is required."
+        )
+
+def resolve_label(request: DorkRequest) -> str:
+    if request.label:
+        return request.label
+    if request.person and request.organization:
+        return f"{request.person} @ {request.organization}"
+    if request.person:
+        return request.person
+    if request.organization:
+        return request.organization
+    if request.keywords:
+        return ", ".join(request.keywords)
+    return "Unnamed Watchlist"
+
+@app.post("/search")
+def search(request: DorkRequest):
+    validate_request(request)
+    result = run_dork(
+        person=request.person,
+        organization=request.organization,
+        keywords=request.keywords,
+        include_sites=request.include_sites,
+        exclude_sites=request.exclude_sites,
+        hours=request.hours,
+        num_results=request.num_results,
+    )
     if not result["success"]:
-        raise HTTPException(status_code=500, detail="SerpApi call failed")
+        raise HTTPException(status_code=500, detail=result.get("error", "SerpApi call failed"))
     return result
 
 @app.post("/monitor")
 def monitor(request: DorkRequest):
-    watchlist_id = get_or_create_watchlist(request.person, request.organization, request.category)
-    result = run_dork(request.person, request.organization, request.hours, request.num_results)
+    validate_request(request)
+    label = resolve_label(request)
+    watchlist_id = get_or_create_watchlist(
+        label=label,
+        person=request.person,
+        organization=request.organization,
+        keywords=request.keywords,
+        include_sites=request.include_sites,
+        exclude_sites=request.exclude_sites,
+        category=request.category,
+    )
+    result = run_dork(
+        person=request.person,
+        organization=request.organization,
+        keywords=request.keywords,
+        include_sites=request.include_sites,
+        exclude_sites=request.exclude_sites,
+        hours=request.hours,
+        num_results=request.num_results,
+    )
     if not result["success"]:
-        raise HTTPException(status_code=500, detail="SerpApi call failed")
+        raise HTTPException(status_code=500, detail=result.get("error", "SerpApi call failed"))
     saved = save_results(watchlist_id, result["results"])
-    return {"watchlist_id": watchlist_id, "results": result["results"], "db": saved}
+    return {"watchlist_id": watchlist_id, "query": result["query"], "results": result["results"], "db": saved}
 
 @app.get("/alerts")
 def alerts():
@@ -69,8 +120,18 @@ def get_watchlists():
 
 @app.post("/watchlist")
 def create_watchlist(request: DorkRequest):
-    watchlist_id = get_or_create_watchlist(request.person, request.organization, request.category)
-    return {"watchlist_id": watchlist_id, "person": request.person, "organization": request.organization, "category": request.category}
+    validate_request(request)
+    label = resolve_label(request)
+    watchlist_id = get_or_create_watchlist(
+        label=label,
+        person=request.person,
+        organization=request.organization,
+        keywords=request.keywords,
+        include_sites=request.include_sites,
+        exclude_sites=request.exclude_sites,
+        category=request.category,
+    )
+    return {"watchlist_id": watchlist_id, "label": label, "category": request.category}
 
 @app.post("/run-now")
 def run_now():
