@@ -1,3 +1,4 @@
+# auto deploy
 name: Deploy to Omen
 
 on:

@@ -149,3 +149,21 @@ INFO:     100.67.143.117:54737 - "GET / HTTP/1.1" 200 OK
 INFO:     100.67.143.117:54737 - "GET /assets/index-CkIeNCHf.js HTTP/1.1" 200 OK
 INFO:     100.67.143.117:54737 - "GET /alerts HTTP/1.1" 200 OK
 INFO:     100.67.143.117:54738 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:apscheduler.scheduler:Scheduler has been shut down
+INFO:scheduler:Scheduler stopped
+INFO:     Application shutdown complete.
+INFO:     Finished server process [727838]
+INFO:     Started server process [751071]
+INFO:     Waiting for application startup.
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:apscheduler.scheduler:Added job "run_all_watchlists" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:scheduler:Scheduler started — running every 24 hours
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     100.67.143.117:62547 - "GET / HTTP/1.1" 200 OK
+INFO:     100.67.143.117:62547 - "GET /assets/index-DT6jlztJ.js HTTP/1.1" 200 OK
+INFO:     100.67.143.117:62549 - "GET /watchlists HTTP/1.1" 200 OK
+INFO:     100.67.143.117:62547 - "GET /alerts HTTP/1.1" 200 OK
