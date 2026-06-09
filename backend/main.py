@@ -30,6 +30,8 @@ app.add_middleware(
         "http://localhost:5173",
         "http://100.65.81.57:8000",
         "http://10.0.0.214:8000",
+        "http://indexpulse-server:8000",
+        "http://indexpulse-server.local:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],

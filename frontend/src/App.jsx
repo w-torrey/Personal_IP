@@ -91,6 +91,16 @@ function TagInput({ label, placeholder, values, onChange }) {
 function AlertCard({ alert }) {
   const cat = alert.category || "Uncategorized";
   const accent = CATEGORY_COLORS[cat] || CATEGORY_COLORS["Uncategorized"];
+
+  const getFavicon = (url) => {
+    try {
+      const hostname = new URL(url).hostname;
+      return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+    } catch {
+      return null;
+    }
+  };
+
   return (
     <div style={{
       background: "#18181f",
@@ -127,8 +137,18 @@ function AlertCard({ alert }) {
           {alert.snippet}
         </p>
       )}
-      <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
-        {alert.source && <span style={{ fontSize: "11px", color: "#666", fontWeight: 500 }}>{alert.source}</span>}
+      <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
+        {alert.link && getFavicon(alert.link) && (
+          <img
+            src={getFavicon(alert.link)}
+            width={14} height={14}
+            style={{ borderRadius: 3, flexShrink: 0 }}
+            onError={e => e.target.style.display = "none"}
+          />
+        )}
+        {alert.source && (
+          <span style={{ fontSize: "11px", color: "#666", fontWeight: 500 }}>{alert.source}</span>
+        )}
         <span style={{ fontSize: "11px", color: "#444" }}>·</span>
         <span style={{ fontSize: "11px", color: "#555" }}>
           {alert.label || [alert.person, alert.organization].filter(Boolean).join(" · ")}
