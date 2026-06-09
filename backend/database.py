@@ -64,6 +64,35 @@ def get_or_create_watchlist(label: str, person: str = None, organization: str = 
         conn.commit()
         return result.fetchone()[0]
 
+def update_watchlist(watchlist_id: int, label: str, person: str = None, organization: str = None,
+                      keywords: list = None, include_sites: list = None,
+                      exclude_sites: list = None, category: str = "Uncategorized"):
+    query_params = json.dumps({
+        "person": person,
+        "organization": organization,
+        "keywords": keywords,
+        "include_sites": include_sites,
+        "exclude_sites": exclude_sites,
+    })
+    with engine.connect() as conn:
+        conn.execute(text("""
+            UPDATE watchlists
+            SET label = :label,
+                person = :person,
+                organization = :organization,
+                category = :category,
+                query_params = CAST(:query_params AS jsonb)
+            WHERE id = :watchlist_id
+        """), {
+            "watchlist_id": watchlist_id,
+            "label": label,
+            "person": person,
+            "organization": organization,
+            "category": category,
+            "query_params": query_params,
+        })
+        conn.commit()
+
 def get_new_alerts():
     with engine.connect() as conn:
         result = conn.execute(text("""

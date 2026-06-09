@@ -143,6 +143,22 @@ def run_now():
 frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
 app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
 
+@app.put("/watchlist/{watchlist_id}")
+def update_watchlist(watchlist_id: int, request: DorkRequest):
+    from database import update_watchlist as db_update_watchlist
+    label = resolve_label(request)
+    db_update_watchlist(
+        watchlist_id=watchlist_id,
+        label=label,
+        person=request.person,
+        organization=request.organization,
+        keywords=request.keywords,
+        include_sites=request.include_sites,
+        exclude_sites=request.exclude_sites,
+        category=request.category,
+    )
+    return {"watchlist_id": watchlist_id, "label": label, "category": request.category}
+
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str):
     return FileResponse(os.path.join(frontend_dist, "index.html"))
