@@ -275,7 +275,7 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved }) {
         <button onClick={() => setShowManage(true)} title="Manage watchlists" style={{ background: "transparent", border: "none", cursor: "pointer", color: "#555", padding: "2px 4px", fontSize: 13, lineHeight: 1, borderRadius: 4 }}
           onMouseEnter={e => e.target.style.color = accent}
           onMouseLeave={e => e.target.style.color = "#555"}>
-          ✏️
+          edit
         </button>
       </div>
       <div style={{ padding: "12px", overflowY: "auto", flex: 1 }}>
