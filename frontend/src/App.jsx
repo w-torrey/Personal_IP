@@ -26,10 +26,15 @@ const INPUT_STYLE = {
 
 function timeAgo(dateStr) {
   if (!dateStr) return "Unknown";
-  const date = new Date(dateStr);
-  if (isNaN(date)) return dateStr;
-  const diff = Math.floor((Date.now() - date) / 1000);
-  if (diff < 60) return `${diff}s ago`;
+  let str = dateStr;
+  if (typeof str === "string") {
+    str = str.replace(" ", "T");
+    if (/^\d{4}-\d{2}-\d{2}T[\d:.]+$/.test(str)) str += "Z";
+  }
+  const date = new Date(str);
+  if (isNaN(date)) return String(dateStr);
+  const diff = Math.max(0, Math.floor((Date.now() - date) / 1000));
+  if (diff < 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
@@ -216,6 +221,26 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   );
 }
 
+function ConfirmRunModal({ onConfirm, onClose }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={onClose}>
+      <div style={{ background: "#13131c", border: "0.5px solid #2a2a38", borderRadius: 16, padding: "28px 28px 24px", width: 380, maxWidth: "90vw" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <span style={{ fontSize: 22, lineHeight: 1 }}>⚡</span>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#e8e6ff" }}>Run all watchlists now?</h2>
+        </div>
+        <p style={{ margin: "0 0 24px", fontSize: 12, color: "#666", lineHeight: 1.6 }}>
+          This will immediately fetch new alerts for every watchlist and refresh the board. It may take a moment to complete.
+        </p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "9px", borderRadius: 8, border: "0.5px solid #2a2a38", background: "transparent", color: "#666", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+          <button onClick={onConfirm} style={{ flex: 1, padding: "9px", borderRadius: 8, border: "none", background: "#7F77DD", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Run now</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   const [editingWatchlist, setEditingWatchlist] = useState(null);
   const accent = CATEGORY_COLORS[category];
@@ -297,6 +322,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showRunConfirm, setShowRunConfirm] = useState(false);
   const [runningNow, setRunningNow] = useState(false);
   const [status, setStatus] = useState("");
 
@@ -320,6 +346,7 @@ export default function App() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function runNow() {
+    setShowRunConfirm(false);
     setRunningNow(true);
     setStatus("Running all watchlists...");
     try {
@@ -337,6 +364,7 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a12", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", display: "flex", flexDirection: "column" }}>
       {showAddModal && <WatchlistFormModal onClose={() => setShowAddModal(false)} onSaved={fetchData} />}
+      {showRunConfirm && <ConfirmRunModal onConfirm={runNow} onClose={() => setShowRunConfirm(false)} />}
 
       <div style={{ padding: "16px 28px", borderBottom: "0.5px solid #1a1a28", display: "flex", alignItems: "center", gap: 16, background: "#0a0a12", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -354,7 +382,7 @@ export default function App() {
           {lastRefresh && <span style={{ fontSize: 11, color: "#444" }}>refreshed {timeAgo(lastRefresh)}</span>}
           <span style={{ fontSize: 11, color: "#555" }}>{watchlists.length} watchlists · {alerts.length} alerts</span>
           <button onClick={fetchData} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "6px 12px", color: "#888", fontSize: 11, cursor: "pointer" }}>↻ Refresh</button>
-          <button onClick={runNow} disabled={runningNow} style={{ background: "transparent", border: "0.5px solid #7F77DD44", borderRadius: 8, padding: "6px 12px", color: "#7F77DD", fontSize: 11, cursor: runningNow ? "not-allowed" : "pointer", opacity: runningNow ? 0.5 : 1 }}>⚡ Run now</button>
+          <button onClick={() => setShowRunConfirm(true)} disabled={runningNow} style={{ background: "transparent", border: "0.5px solid #7F77DD44", borderRadius: 8, padding: "6px 12px", color: "#7F77DD", fontSize: 11, cursor: runningNow ? "not-allowed" : "pointer", opacity: runningNow ? 0.5 : 1 }}>⚡ Run now</button>
           <button onClick={() => setShowAddModal(true)} style={{ background: "#7F77DD", border: "none", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Add watchlist</button>
         </div>
       </div>
