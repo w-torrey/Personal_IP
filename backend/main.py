@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
-from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists
+from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import os
 
@@ -162,3 +162,9 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str):
     return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+@app.delete("/watchlist/{watchlist_id}")
+def delete_watchlist(watchlist_id:int):
+    deleted = delete_watchlist_db(watchlist_id)
+    if not deleted: raise HTTPException(status_code=404, detail="Watchlist not found")
+    return {"deleted": watchlist_id}

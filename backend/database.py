@@ -138,3 +138,10 @@ def get_all_watchlists():
         }
         for row in rows
     ]
+
+def delete_watchlist_db(watchlist_id):
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM results WHERE watchlist_id = :id"), {"id": watchlist_id})
+        result = conn.execute(text("DELETE FROM watchlists where id = :id"), {"id": watchlist_id})
+        conn.commit()
+        return result.rowcount
