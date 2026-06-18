@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
 const API_BASE = "http://100.65.81.57:8000";
-
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Uncategorized"];
 
 const CATEGORY_COLORS = {
@@ -245,6 +244,22 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   const [editingWatchlist, setEditingWatchlist] = useState(null);
   const accent = CATEGORY_COLORS[category];
   const filtered = watchlists.filter(w => (w.category || "Uncategorized") === category);
+  const [confirmingId, setConfirmingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null)
+
+  async function handleDelete(id) {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`${API_BASE}/watchlist/${id}`, {method: "DELETE"});
+      if (!res.ok) throw new Error("Failed to delete");
+      onSaved();
+    }
+    catch (e) {
+      console.error("Failed to delete watchlist");
+      setDeletingId(null);
+      setConfirmingId(null);
+    }
+  }
 
   if (editingWatchlist) {
     return <WatchlistFormModal watchlist={editingWatchlist} onClose={() => setEditingWatchlist(null)} onSaved={() => { setEditingWatchlist(null); onSaved(); }} />;
@@ -270,9 +285,36 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
                     <p style={{ margin: "3px 0 0", fontSize: 11, color: "#555" }}>excl. {w.query_params.exclude_sites.join(", ")}</p>
                   )}
                 </div>
-                <button onClick={() => setEditingWatchlist(w)} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 6, padding: "5px 12px", color: "#7F77DD", fontSize: 11, cursor: "pointer", flexShrink: 0 }}>
-                  Edit
-                </button>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    {confirmingId === w.id ? (
+                      <>
+                        <button onClick={() => handleDelete(w.id)} disabled={deletingId === w.id}
+  style={{ background: "#D85A30", border: "none", borderRadius: 6, padding: "5px 12px", color:
+  "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", opacity: deletingId === w.id ? 0.6 :
+  1 }}>
+                          {deletingId === w.id ? "Deleting..." : "Confirm"}
+                        </button>
+                        <button onClick={() => setConfirmingId(null)} disabled={deletingId ===
+  w.id} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 6,
+  padding: "5px 12px", color: "#666", fontSize: 11, cursor: "pointer" }}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => { setConfirmingId(null); setEditingWatchlist(w);
+  }} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 6, padding:
+  "5px 12px", color: "#7F77DD", fontSize: 11, cursor: "pointer" }}>
+                          Edit
+                        </button>
+                        <button onClick={() => setConfirmingId(w.id)} style={{ background:
+  "transparent", border: "0.5px solid #2a2a38", borderRadius: 6, padding: "5px 12px", color:
+  "#D85A30", fontSize: 11, cursor: "pointer" }}>
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
               </div>
             ))}
           </div>
