@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 
 const API_BASE = "http://100.65.81.57:8000";
-const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Uncategorized"];
+const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
 
 const CATEGORY_COLORS = {
   "Exec Watch": "#7F77DD",
   "Fraud": "#D85A30",
   "Threat Intelligence": "#1D9E75",
-  "Uncategorized": "#888780",
+  "Custom": "#888780",
 };
 
 const CATEGORY_BG = {
   "Exec Watch": "rgba(127,119,221,0.12)",
   "Fraud": "rgba(216,90,48,0.12)",
   "Threat Intelligence": "rgba(29,158,117,0.12)",
-  "Uncategorized": "rgba(136,135,128,0.12)",
+  "Custom": "rgba(136,135,128,0.12)",
 };
 
 const INPUT_STYLE = {
@@ -70,8 +70,8 @@ function TagInput({ label, placeholder, values, onChange }) {
 }
 
 function AlertCard({ alert }) {
-  const cat = alert.category || "Uncategorized";
-  const accent = CATEGORY_COLORS[cat] || CATEGORY_COLORS["Uncategorized"];
+  const cat = alert.category || "Custom";
+  const accent = CATEGORY_COLORS[cat] || CATEGORY_COLORS["Custom"];
   const getFavicon = (url) => {
     try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; }
     catch { return null; }
@@ -243,7 +243,7 @@ function ConfirmRunModal({ onConfirm, onClose }) {
 function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   const [editingWatchlist, setEditingWatchlist] = useState(null);
   const accent = CATEGORY_COLORS[category];
-  const filtered = watchlists.filter(w => (w.category || "Uncategorized") === category);
+  const filtered = watchlists.filter(w => (w.category || "Custom") === category);
   const [confirmingId, setConfirmingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null)
 
@@ -434,7 +434,7 @@ export default function App() {
           <Column
             key={cat}
             category={cat}
-            alerts={alerts.filter(a => (a.category || "Uncategorized") === cat)}
+            alerts={alerts.filter(a => (a.category || "Custom") === cat)}
             watchlists={watchlists}
             loading={loading}
             onWatchlistSaved={fetchData}
