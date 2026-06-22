@@ -424,7 +424,7 @@ export default function App() {
           {lastRefresh && <span style={{ fontSize: 11, color: "#444" }}>refreshed {timeAgo(lastRefresh)}</span>}
           <span style={{ fontSize: 11, color: "#555" }}>{watchlists.length} watchlists · {alerts.length} alerts</span>
           <button onClick={fetchData} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "6px 12px", color: "#888", fontSize: 11, cursor: "pointer" }}>↻ Refresh</button>
-          <button onClick={() => setShowRunConfirm(true)} disabled={runningNow} style={{ background: "transparent", border: "0.5px solid #7F77DD44", borderRadius: 8, padding: "6px 12px", color: "#7F77DD", fontSize: 11, cursor: runningNow ? "not-allowed" : "pointer", opacity: runningNow ? 0.5 : 1 }}>⚡ Run now</button>
+          <button onClick={() => setShowRunConfirm(true)} disabled={runningNow} style={{ background: "transparent", border: "0.5px solid #7F77DD44", borderRadius: 8, padding: "6px 12px", color: "#7F77DD", fontSize: 11, cursor: runningNow ? "not-allowed" : "pointer", opacity: runningNow ? 0.5 : 1 }}> Run now</button>
           <button onClick={() => setShowAddModal(true)} style={{ background: "#7F77DD", border: "none", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Add watchlist</button>
         </div>
       </div>
