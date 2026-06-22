@@ -66,7 +66,7 @@ def get_or_create_watchlist(label: str, person: str = None, organization: str = 
 
 def update_watchlist(watchlist_id: int, label: str, person: str = None, organization: str = None,
                       keywords: list = None, include_sites: list = None,
-                      exclude_sites: list = None, category: str = "Uncategorized"):
+                      exclude_sites: list = None, category: str = "Custom"):
     query_params = json.dumps({
         "person": person,
         "organization": organization,
