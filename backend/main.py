@@ -6,8 +6,9 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
-from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db
+from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
+import auth
 import os
 
 @asynccontextmanager
@@ -158,6 +159,27 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
         category=request.category,
     )
     return {"watchlist_id": watchlist_id, "label": label, "category": request.category}
+
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/auth/register")
+def register(request: AuthRequest):
+    if get_user_by_email(request.email):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed = auth.hash_password(request.password)
+    create_user(request.email, hashed)
+    return {"message": "Account created"}
+
+@app.post("/auth/login")
+def login(request: AuthRequest):
+    user = get_user_by_email(request.email)
+    if not user or not auth.verify_password(request.password, user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = auth.create_access_token(user["email"])
+    return {"token": token, "email": user["email"]}
+
 
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str):

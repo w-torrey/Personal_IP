@@ -145,3 +145,24 @@ def delete_watchlist_db(watchlist_id):
         result = conn.execute(text("DELETE FROM watchlists where id = :id"), {"id": watchlist_id})
         conn.commit()
         return result.rowcount
+
+def create_user(email: str, hashed_password: str):
+    with engine.connect() as conn:
+        conn.execute(text("""
+                          INSERT INTO users (email, hashed_password)
+                          VALUES (:email, :hashed_password)
+                          """), {
+                              "email": email,
+                              "hashed_password": hashed_password
+                          })
+        conn.commit()
+
+def get_user_by_email(email: str):
+    with engine.connect() as conn:
+        result = conn.execute(text(""" SELECT email, hashed_password FROM users WHERE email = :email """), {"email": email})
+        row = result.fetchone()
+
+    if not row:
+        return None
+    
+    return {"email": row[0], "hashed_password": row[1]}
