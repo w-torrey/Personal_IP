@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const API_BASE = "http://100.65.81.57:8000";
+const API_BASE = "http://localhost:8000";
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
 
 const CATEGORY_COLORS = {
@@ -358,6 +358,79 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved }) {
   );
 }
 
+////////////////////////////////////
+function AuthPage({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit() {
+    setError("");
+    setLoading(true);
+    const endpoint = isLogin ? "/auth/login" : "/auth/register";
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Something went wrong");
+      if (isLogin) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userEmail", data.email);
+        onLogin(data.email);
+      } else {
+        setIsLogin(true);
+        setError("Account created — please log in.");
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0a12", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'IBM Plex Mono', 'Courier New', monospace" }}>
+      <div style={{ background: "#13131c", border: "0.5px solid #2a2a38", borderRadius: 16, padding: "36px 32px", width: 380, maxWidth: "90vw" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" fill="#7F77DD" />
+            <circle cx="12" cy="12" r="7" stroke="#7F77DD" strokeWidth="1" strokeDasharray="2 2" fill="none" opacity="0.5" />
+            <circle cx="12" cy="12" r="11" stroke="#7F77DD" strokeWidth="0.5" fill="none" opacity="0.25" />
+          </svg>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#e8e6ff", letterSpacing: "0.05em" }}>
+            INDEX<span style={{ color: "#7F77DD" }}>PULSE</span>
+          </span>
+        </div>
+        <h2 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 600, color: "#e8e6ff" }}>
+          {isLogin ? "Sign in" : "Create account"}
+        </h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={INPUT_STYLE} />
+          <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" style={INPUT_STYLE}
+            onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+          {error && <p style={{ margin: 0, fontSize: 12, color: error.includes("created") ? "#1D9E75" : "#D85A30" }}>{error}</p>}
+          <button onClick={handleSubmit} disabled={loading} style={{ padding: "10px", borderRadius: 8, border: "none", background: "#7F77DD", color: "#fff", fontSize: 13, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, marginTop: 4 }}>
+            {loading ? "..." : isLogin ? "Sign in" : "Create account"}
+          </button>
+          <p style={{ margin: 0, fontSize: 11, color: "#555", textAlign: "center" }}>
+            {isLogin ? "No account?" : "Already have an account?"}{" "}
+            <span onClick={() => { setIsLogin(!isLogin); setError(""); }} style={{ color: "#7F77DD", cursor: "pointer" }}>
+              {isLogin ? "Sign up" : "Sign in"}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+/////////////////////
+
+
 export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [watchlists, setWatchlists] = useState([]);
@@ -367,6 +440,18 @@ export default function App() {
   const [showRunConfirm, setShowRunConfirm] = useState(false);
   const [runningNow, setRunningNow] = useState(false);
   const [status, setStatus] = useState("");
+
+
+  //////////////////
+  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("userEmail"));
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userEmail");
+    setCurrentUser(null);
+  }
+  /////////////////
+
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -403,6 +488,12 @@ export default function App() {
     }
   }
 
+  //////////////////
+  if (!currentUser) {
+    return <AuthPage onLogin={(email) => setCurrentUser(email)} />;
+  }
+  //////////////
+
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a12", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", display: "flex", flexDirection: "column" }}>
       {showAddModal && <WatchlistFormModal onClose={() => setShowAddModal(false)} onSaved={fetchData} />}
@@ -423,6 +514,8 @@ export default function App() {
           {status && <span style={{ fontSize: 11, color: "#7F77DD" }}>{status}</span>}
           {lastRefresh && <span style={{ fontSize: 11, color: "#444" }}>refreshed {timeAgo(lastRefresh)}</span>}
           <span style={{ fontSize: 11, color: "#555" }}>{watchlists.length} watchlists · {alerts.length} alerts</span>
+          <span style={{ fontSize: 11, color: "#555" }}>{currentUser}</span>
+          <button onClick={handleLogout} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "6px 12px", color: "#888", fontSize: 11, cursor: "pointer" }}>Sign out</button>
           <button onClick={fetchData} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "6px 12px", color: "#888", fontSize: 11, cursor: "pointer" }}>↻ Refresh</button>
           <button onClick={() => setShowRunConfirm(true)} disabled={runningNow} style={{ background: "transparent", border: "0.5px solid #7F77DD44", borderRadius: 8, padding: "6px 12px", color: "#7F77DD", fontSize: 11, cursor: runningNow ? "not-allowed" : "pointer", opacity: runningNow ? 0.5 : 1 }}> Run now</button>
           <button onClick={() => setShowAddModal(true)} style={{ background: "#7F77DD", border: "none", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Add watchlist</button>
