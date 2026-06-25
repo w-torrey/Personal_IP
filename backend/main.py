@@ -41,8 +41,6 @@ app.add_middleware(
 
 class DorkRequest(BaseModel):
     label: Optional[str] = None
-    person: Optional[str] = None
-    organization: Optional[str] = None
     keywords: Optional[list[str]] = None
     include_sites: Optional[list[str]] = None
     exclude_sites: Optional[list[str]] = None
@@ -51,21 +49,15 @@ class DorkRequest(BaseModel):
     category: Optional[str] = "Uncategorized"
 
 def validate_request(request: DorkRequest):
-    if not any([request.person, request.organization, request.keywords, request.include_sites]):
+    if not any([request.keywords, request.include_sites]):
         raise HTTPException(
             status_code=400,
-            detail="At least one of: person, organization, keywords, or include_sites is required."
+            detail="At least one of: keywords or include_sites is required."
         )
 
 def resolve_label(request: DorkRequest) -> str:
     if request.label:
         return request.label
-    if request.person and request.organization:
-        return f"{request.person} @ {request.organization}"
-    if request.person:
-        return request.person
-    if request.organization:
-        return request.organization
     if request.keywords:
         return ", ".join(request.keywords)
     return "Unnamed Watchlist"
@@ -74,8 +66,6 @@ def resolve_label(request: DorkRequest) -> str:
 def search(request: DorkRequest):
     validate_request(request)
     result = run_dork(
-        person=request.person,
-        organization=request.organization,
         keywords=request.keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
@@ -92,16 +82,12 @@ def monitor(request: DorkRequest):
     label = resolve_label(request)
     watchlist_id = get_or_create_watchlist(
         label=label,
-        person=request.person,
-        organization=request.organization,
         keywords=request.keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         category=request.category,
     )
     result = run_dork(
-        person=request.person,
-        organization=request.organization,
         keywords=request.keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
@@ -127,8 +113,6 @@ def create_watchlist(request: DorkRequest):
     label = resolve_label(request)
     watchlist_id = get_or_create_watchlist(
         label=label,
-        person=request.person,
-        organization=request.organization,
         keywords=request.keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
@@ -151,8 +135,6 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
     db_update_watchlist(
         watchlist_id=watchlist_id,
         label=label,
-        person=request.person,
-        organization=request.organization,
         keywords=request.keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,

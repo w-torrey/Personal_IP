@@ -18,8 +18,6 @@ def run_all_watchlists():
         logger.info(f"Running dork for: {w['label']}")
         qp = w.get("query_params") or {}
         result = run_dork(
-            person=qp.get("person"),
-            organization=qp.get("organization"),
             keywords=qp.get("keywords"),
             include_sites=qp.get("include_sites"),
             exclude_sites=qp.get("exclude_sites"),

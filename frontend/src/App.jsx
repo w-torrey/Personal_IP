@@ -109,7 +109,7 @@ function AlertCard({ alert }) {
         )}
         {alert.source && <span style={{ fontSize: "11px", color: "#666", fontWeight: 500 }}>{alert.source}</span>}
         <span style={{ fontSize: "11px", color: "#444" }}>·</span>
-        <span style={{ fontSize: "11px", color: "#555" }}>{alert.label || [alert.person, alert.organization].filter(Boolean).join(" · ")}</span>
+        <span style={{ fontSize: "11px", color: "#555" }}>{alert.label || "Unnamed Watchlist"}</span>
         <span style={{ fontSize: "11px", color: "#444", marginLeft: "auto" }}>{timeAgo(alert.fetched_at)}</span>
       </div>
     </div>
@@ -120,8 +120,6 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   const isEdit = !!watchlist;
   const qp = watchlist?.query_params || {};
   const [label, setLabel] = useState(watchlist?.label || "");
-  const [person, setPerson] = useState(qp.person || watchlist?.person || "");
-  const [org, setOrg] = useState(qp.organization || watchlist?.organization || "");
   const [keywords, setKeywords] = useState(qp.keywords || []);
   const [includeSites, setIncludeSites] = useState(qp.include_sites || []);
   const [excludeSites, setExcludeSites] = useState(qp.exclude_sites || []);
@@ -132,25 +130,21 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
 
   useEffect(() => {
     const parts = [];
-    if (person.trim()) parts.push(`"${person.trim()}"`);
-    if (org.trim()) parts.push(`"${org.trim()}"`);
     keywords.forEach(k => parts.push(`"${k}"`));
     if (includeSites.length) parts.push(`(${includeSites.map(s => `site:${s}`).join(" OR ")})`);
     excludeSites.forEach(s => parts.push(`-site:${s}`));
     setPreview(parts.join(" ") || "");
-  }, [person, org, keywords, includeSites, excludeSites]);
+  }, [keywords, includeSites, excludeSites]);
 
   async function handleSubmit() {
-    if (!person.trim() && !org.trim() && keywords.length === 0 && includeSites.length === 0) {
-      setError("At least one of: person, organization, keywords, or include sites is required.");
+    if (keywords.length === 0 && includeSites.length === 0) {
+      setError("At least one of: keywords or include sites is required.");
       return;
     }
     setLoading(true);
     setError("");
     const body = {
       label: label.trim() || undefined,
-      person: person.trim() || undefined,
-      organization: org.trim() || undefined,
       keywords: keywords.length ? keywords : undefined,
       include_sites: includeSites.length ? includeSites : undefined,
       exclude_sites: excludeSites.length ? excludeSites : undefined,
@@ -182,14 +176,6 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
           <div style={{ borderTop: "0.5px solid #1e1e2e", paddingTop: 14 }}>
             <p style={{ margin: "0 0 12px", fontSize: 11, color: "#555", letterSpacing: "0.04em" }}>QUERY PARAMETERS</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 6 }}>Person</label>
-                <input value={person} onChange={e => setPerson(e.target.value)} placeholder="e.g. Ronald O'Hanley" style={INPUT_STYLE} />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 6 }}>Organization</label>
-                <input value={org} onChange={e => setOrg(e.target.value)} placeholder="e.g. State Street" style={INPUT_STYLE} />
-              </div>
               <TagInput label="Keywords" placeholder="e.g. ransomware, data breach" values={keywords} onChange={setKeywords} />
               <TagInput label="Include sites" placeholder="e.g. sec.gov, reuters.com" values={includeSites} onChange={setIncludeSites} />
               <TagInput label="Exclude sites" placeholder="e.g. instagram.com, linkedin.com" values={excludeSites} onChange={setExcludeSites} />

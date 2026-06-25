@@ -33,12 +33,9 @@ def save_results(watchlist_id: int, results: list):
         conn.commit()
     return {"saved": saved, "skipped": skipped}
 
-def get_or_create_watchlist(label: str, person: str = None, organization: str = None,
-                             keywords: list = None, include_sites: list = None,
+def get_or_create_watchlist(label: str, keywords: list = None, include_sites: list = None,
                              exclude_sites: list = None, category: str = "Uncategorized") -> int:
     query_params = json.dumps({
-        "person": person,
-        "organization": organization,
         "keywords": keywords,
         "include_sites": include_sites,
         "exclude_sites": exclude_sites,
@@ -51,25 +48,21 @@ def get_or_create_watchlist(label: str, person: str = None, organization: str = 
         if row:
             return row[0]
         result = conn.execute(text("""
-            INSERT INTO watchlists (label, person, organization, category, query_params)
-            VALUES (:label, :person, :organization, :category, CAST(:query_params AS jsonb))
+            INSERT INTO watchlists (label, category, query_params)
+            VALUES (:label, :category, CAST(:query_params AS jsonb))
             RETURNING id
         """), {
             "label": label,
-            "person": person,
-            "organization": organization,
             "category": category,
             "query_params": query_params,
         })
         conn.commit()
         return result.fetchone()[0]
 
-def update_watchlist(watchlist_id: int, label: str, person: str = None, organization: str = None,
-                      keywords: list = None, include_sites: list = None,
-                      exclude_sites: list = None, category: str = "Custom"):
+def update_watchlist(watchlist_id: int, label: str, keywords: list = None,
+                      include_sites: list = None, exclude_sites: list = None,
+                      category: str = "Custom"):
     query_params = json.dumps({
-        "person": person,
-        "organization": organization,
         "keywords": keywords,
         "include_sites": include_sites,
         "exclude_sites": exclude_sites,
@@ -78,16 +71,12 @@ def update_watchlist(watchlist_id: int, label: str, person: str = None, organiza
         conn.execute(text("""
             UPDATE watchlists
             SET label = :label,
-                person = :person,
-                organization = :organization,
                 category = :category,
                 query_params = CAST(:query_params AS jsonb)
             WHERE id = :watchlist_id
         """), {
             "watchlist_id": watchlist_id,
             "label": label,
-            "person": person,
-            "organization": organization,
             "category": category,
             "query_params": query_params,
         })
@@ -96,7 +85,7 @@ def update_watchlist(watchlist_id: int, label: str, person: str = None, organiza
 def get_new_alerts():
     with engine.connect() as conn:
         result = conn.execute(text("""
-            SELECT r.id, w.person, w.organization, w.category, w.label, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at
+            SELECT r.id, w.category, w.label, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at
             FROM results r
             JOIN watchlists w ON r.watchlist_id = w.id
             WHERE r.is_new = TRUE
@@ -106,16 +95,14 @@ def get_new_alerts():
     return [
         {
             "id": row[0],
-            "person": row[1],
-            "organization": row[2],
-            "category": row[3],
-            "label": row[4],
-            "title": row[5],
-            "link": row[6],
-            "snippet": row[7],
-            "source": row[8],
-            "date_found": row[9],
-            "fetched_at": str(row[10]),
+            "category": row[1],
+            "label": row[2],
+            "title": row[3],
+            "link": row[4],
+            "snippet": row[5],
+            "source": row[6],
+            "date_found": row[7],
+            "fetched_at": str(row[8]),
         }
         for row in rows
     ]
@@ -123,7 +110,7 @@ def get_new_alerts():
 def get_all_watchlists():
     with engine.connect() as conn:
         result = conn.execute(text("""
-            SELECT id, label, person, organization, category, query_params 
+            SELECT id, label, category, query_params
             FROM watchlists
         """))
         rows = result.fetchall()
@@ -131,10 +118,8 @@ def get_all_watchlists():
         {
             "id": row[0],
             "label": row[1],
-            "person": row[2],
-            "organization": row[3],
-            "category": row[4],
-            "query_params": row[5],
+            "category": row[2],
+            "query_params": row[3],
         }
         for row in rows
     ]

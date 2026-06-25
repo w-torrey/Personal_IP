@@ -6,18 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def build_query(
-    person: str = None,
-    organization: str = None,
     keywords: list = None,
     include_sites: list = None,
     exclude_sites: list = None,
 ) -> str:
     parts = []
 
-    if person:
-        parts.append(f'"{person}"')
-    if organization:
-        parts.append(f'"{organization}"')
     if keywords:
         for kw in keywords:
             parts.append(f'"{kw}"')
@@ -32,8 +26,6 @@ def build_query(
 
 
 def run_dork(
-    person: str = None,
-    organization: str = None,
     keywords: list = None,
     include_sites: list = None,
     exclude_sites: list = None,
@@ -41,8 +33,6 @@ def run_dork(
     num_results: int = 10,
 ):
     query = build_query(
-        person=person,
-        organization=organization,
         keywords=keywords,
         include_sites=include_sites,
         exclude_sites=exclude_sites,
@@ -80,4 +70,5 @@ def run_dork(
 
 if __name__ == "__main__":
     output = run_dork(keywords=["ransomware", "data breach"])
+
     print(json.dumps(output, indent=2))
