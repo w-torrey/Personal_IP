@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
+const version = "1.0.0"
+
 const API_BASE = "http://100.65.81.57:8000";
 
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
@@ -438,6 +440,9 @@ function AuthPage({ onLogin }) {
             </span>
           </p>
         </div>
+      </div>
+      <div style={{ position: "fixed", bottom: "12px", left: "16px", color: "#667", fontSize: "12px" }}>
+        v{version}
       </div>
     </div>
   );
