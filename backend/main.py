@@ -104,7 +104,7 @@ def alerts():
     return get_new_alerts()
 
 @app.patch("/alerts/{alert_id}/read")
-def read(alert_id):
+def read(alert_id: int):
     updated = mark_as_read(alert_id)
     if not updated: raise HTTPException(status_code=404, detail="Alert not found")
     return {"id": alert_id, "is_read": True}
