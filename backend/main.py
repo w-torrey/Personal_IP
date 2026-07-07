@@ -154,6 +154,8 @@ class AuthRequest(BaseModel):
 
 @app.post("/auth/register")
 def register(request: AuthRequest):
+    if "@" not in request.email or "." not in request.email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Invalid email")
     if get_user_by_email(request.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = auth.hash_password(request.password)
