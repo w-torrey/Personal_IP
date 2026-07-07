@@ -33,10 +33,12 @@ def save_results(watchlist_id: int, results: list):
         conn.commit()
     return {"saved": saved, "skipped": skipped}
 
-def get_or_create_watchlist(label: str, keywords: list = None, include_sites: list = None,
-                             exclude_sites: list = None, category: str = "Uncategorized") -> int:
+def get_or_create_watchlist(label: str, keywords: list = None, exclude_keywords: list = None,
+                             include_sites: list = None, exclude_sites: list = None,
+                             category: str = "Uncategorized") -> int:
     query_params = json.dumps({
         "keywords": keywords,
+        "exclude_keywords": exclude_keywords,
         "include_sites": include_sites,
         "exclude_sites": exclude_sites,
     })
@@ -60,10 +62,11 @@ def get_or_create_watchlist(label: str, keywords: list = None, include_sites: li
         return result.fetchone()[0]
 
 def update_watchlist(watchlist_id: int, label: str, keywords: list = None,
-                      include_sites: list = None, exclude_sites: list = None,
-                      category: str = "Custom"):
+                      exclude_keywords: list = None, include_sites: list = None,
+                      exclude_sites: list = None, category: str = "Custom"):
     query_params = json.dumps({
         "keywords": keywords,
+        "exclude_keywords": exclude_keywords,
         "include_sites": include_sites,
         "exclude_sites": exclude_sites,
     })

@@ -42,6 +42,7 @@ app.add_middleware(
 class DorkRequest(BaseModel):
     label: Optional[str] = None
     keywords: Optional[list[str]] = None
+    exclude_keywords: Optional[list[str]] = None
     include_sites: Optional[list[str]] = None
     exclude_sites: Optional[list[str]] = None
     hours: Optional[int] = 24
@@ -67,6 +68,7 @@ def search(request: DorkRequest):
     validate_request(request)
     result = run_dork(
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         hours=request.hours,
@@ -83,12 +85,14 @@ def monitor(request: DorkRequest):
     watchlist_id = get_or_create_watchlist(
         label=label,
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         category=request.category,
     )
     result = run_dork(
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         hours=request.hours,
@@ -114,6 +118,7 @@ def create_watchlist(request: DorkRequest):
     watchlist_id = get_or_create_watchlist(
         label=label,
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         category=request.category,
@@ -136,6 +141,7 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
         watchlist_id=watchlist_id,
         label=label,
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         category=request.category,

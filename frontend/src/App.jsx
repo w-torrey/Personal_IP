@@ -121,6 +121,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   const qp = watchlist?.query_params || {};
   const [label, setLabel] = useState(watchlist?.label || "");
   const [keywords, setKeywords] = useState(qp.keywords || []);
+  const [excludeKeywords, setExcludeKeywords] = useState(qp.exclude_keywords || []);
   const [includeSites, setIncludeSites] = useState(qp.include_sites || []);
   const [excludeSites, setExcludeSites] = useState(qp.exclude_sites || []);
   const [category, setCategory] = useState(watchlist?.category || "Exec Watch");
@@ -131,10 +132,11 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   useEffect(() => {
     const parts = [];
     keywords.forEach(k => parts.push(`"${k}"`));
+    excludeKeywords.forEach(k => parts.push(`-"${k}"`));
     if (includeSites.length) parts.push(`(${includeSites.map(s => `site:${s}`).join(" OR ")})`);
     excludeSites.forEach(s => parts.push(`-site:${s}`));
     setPreview(parts.join(" ") || "");
-  }, [keywords, includeSites, excludeSites]);
+  }, [keywords, excludeKeywords, includeSites, excludeSites]);
 
   async function handleSubmit() {
     if (keywords.length === 0 && includeSites.length === 0) {
@@ -146,6 +148,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
     const body = {
       label: label.trim() || undefined,
       keywords: keywords.length ? keywords : undefined,
+      exclude_keywords: excludeKeywords.length ? excludeKeywords : undefined,
       include_sites: includeSites.length ? includeSites : undefined,
       exclude_sites: excludeSites.length ? excludeSites : undefined,
       category,
@@ -177,6 +180,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
             <p style={{ margin: "0 0 12px", fontSize: 11, color: "#555", letterSpacing: "0.04em" }}>QUERY PARAMETERS</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <TagInput label="Keywords" placeholder="e.g. ransomware, data breach" values={keywords} onChange={setKeywords} />
+              <TagInput label="Exclude keywords" placeholder="e.g. press release, sponsored" values={excludeKeywords} onChange={setExcludeKeywords} />
               <TagInput label="Include sites" placeholder="e.g. sec.gov, reuters.com" values={includeSites} onChange={setIncludeSites} />
               <TagInput label="Exclude sites" placeholder="e.g. instagram.com, linkedin.com" values={excludeSites} onChange={setExcludeSites} />
             </div>
@@ -501,7 +505,7 @@ export default function App() {
           {lastRefresh && <span style={{ fontSize: 11, color: "#444" }}>refreshed {timeAgo(lastRefresh)}</span>}
           <span style={{ fontSize: 11, color: "#555" }}>{watchlists.length} watchlists · {alerts.length} alerts</span>
           <span style={{ fontSize: 11, color: "#555" }}>{currentUser}</span>
-          <button onClick={handleLogout} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "6px 12px", color: "#888", fontSize: 11, cursor: "pointer" }}>Sign out 2</button>
+          <button onClick={handleLogout} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "6px 12px", color: "#888", fontSize: 11, cursor: "pointer" }}>Sign out</button>
           <button onClick={fetchData} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "6px 12px", color: "#888", fontSize: 11, cursor: "pointer" }}>↻ Refresh</button>
           <button onClick={() => setShowRunConfirm(true)} disabled={runningNow} style={{ background: "transparent", border: "0.5px solid #7F77DD44", borderRadius: 8, padding: "6px 12px", color: "#7F77DD", fontSize: 11, cursor: runningNow ? "not-allowed" : "pointer", opacity: runningNow ? 0.5 : 1 }}> Run now</button>
           <button onClick={() => setShowAddModal(true)} style={{ background: "#7F77DD", border: "none", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Add watchlist</button>

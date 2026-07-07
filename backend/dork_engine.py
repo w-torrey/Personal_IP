@@ -1,20 +1,27 @@
-from serpapi import GoogleSearch
+from serpapi import GoogleSearch # serp api client from google search
 import os
 import json
-from dotenv import load_dotenv
+from dotenv import load_dotenv 
 
-load_dotenv()
+load_dotenv() # able to read .env
 
 def build_query(
+        # this function basically creates phrases that are all wrapped in quotes to send to query
     keywords: list = None,
+    # testing out excluding the keywords (-"word")
+    exclude_keywords: list =None,
     include_sites: list = None,
     exclude_sites: list = None,
+    # returns s ingle google query ("jackson" "morrow" "something")
 ) -> str:
-    parts = []
+    parts = [] # takes in each query before joining
 
     if keywords:
         for kw in keywords:
             parts.append(f'"{kw}"')
+    if exclude_keywords:
+        for kw in exclude_keywords:
+            parts.append(f'-"{kw}"')
     if include_sites:
         site_clause = " OR ".join(f"site:{s}" for s in include_sites)
         parts.append(f"({site_clause})")
@@ -27,6 +34,7 @@ def build_query(
 
 def run_dork(
     keywords: list = None,
+    exclude_keywords: list = None,
     include_sites: list = None,
     exclude_sites: list = None,
     hours: int = 24,
@@ -34,6 +42,7 @@ def run_dork(
 ):
     query = build_query(
         keywords=keywords,
+        exclude_keywords=exclude_keywords,
         include_sites=include_sites,
         exclude_sites=exclude_sites,
     )
