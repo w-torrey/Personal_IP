@@ -85,7 +85,7 @@ def update_watchlist(watchlist_id: int, label: str, keywords: list = None,
 def get_new_alerts():
     with engine.connect() as conn:
         result = conn.execute(text("""
-            SELECT r.id, w.category, w.label, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at
+            SELECT r.id, w.category, w.label, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at, r.is_read, r.watchlist_id, w.query_params
             FROM results r
             JOIN watchlists w ON r.watchlist_id = w.id
             WHERE r.is_new = TRUE
@@ -103,6 +103,9 @@ def get_new_alerts():
             "source": row[6],
             "date_found": row[7],
             "fetched_at": str(row[8]),
+            "is_read": row[9],
+            "watchlist_id": row[10],
+            "query_params": row[11],
         }
         for row in rows
     ]
@@ -151,3 +154,9 @@ def get_user_by_email(email: str):
         return None
     
     return {"email": row[0], "hashed_password": row[1]}
+
+def mark_as_read(alert_id: int): 
+    with engine.connect() as conn:
+        result = conn.execute(text("UPDATE results SET is_read = TRUE WHERE id = :id"), {"id": alert_id})
+        conn.commit()
+        return result.rowcount

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 
-const API_BASE = "http://100.65.81.57:8000";
+//const API_BASE = "http://100.65.81.57:8000";
+const API_BASE = "http://localhost:8000";
+
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
 
 const CATEGORY_COLORS = {
@@ -69,7 +71,7 @@ function TagInput({ label, placeholder, values, onChange }) {
   );
 }
 
-function AlertCard({ alert }) {
+function AlertCard({ alert, onOpenAlerts }) {
   const cat = alert.category || "Custom";
   const accent = CATEGORY_COLORS[cat] || CATEGORY_COLORS["Custom"];
   const getFavicon = (url) => {
@@ -77,11 +79,11 @@ function AlertCard({ alert }) {
     catch { return null; }
   };
   return (
-    <div style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderLeft: `3px solid ${accent}`, borderRadius: "10px", padding: "14px 16px", marginBottom: "10px", cursor: "default" }}>
+    <div onClick={() => onOpenAlerts(alert)} style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderLeft: `3px solid ${accent}`, borderRadius: "10px", padding: "14px 16px", marginBottom: "10px", opacity: alert.is_read ? 0.5 : 1, cursor: "pointer" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#e8e6ff", lineHeight: 1.4, flex: 1 }}>
           {alert.link ? (
-            <a href={alert.link} target="_blank" rel="noopener noreferrer"
+            <a onClick={e => e.stopPropagation()} href={alert.link} target="_blank" rel="noopener noreferrer"
               style={{ color: "#e8e6ff", textDecoration: "none" }}
               onMouseEnter={e => e.target.style.color = accent}
               onMouseLeave={e => e.target.style.color = "#e8e6ff"}>
@@ -90,7 +92,7 @@ function AlertCard({ alert }) {
           ) : (alert.title || "Untitled")}
         </p>
         {alert.link && (
-          <a href={alert.link} target="_blank" rel="noopener noreferrer" style={{ color: "#555", flexShrink: 0, marginTop: 2 }}>
+          <a onClick={e => e.stopPropagation()} href={alert.link} target="_blank" rel="noopener noreferrer" style={{ color: "#555", flexShrink: 0, marginTop: 2 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
               <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
@@ -311,7 +313,7 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   );
 }
 
-function Column({ category, alerts, watchlists, loading, onWatchlistSaved }) {
+function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpenAlerts }) {
   const accent = CATEGORY_COLORS[category];
   const bg = CATEGORY_BG[category];
   const [showManage, setShowManage] = useState(false);
@@ -337,7 +339,7 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved }) {
         ) : alerts.length === 0 ? (
           <div style={{ color: "#333", fontSize: "12px", textAlign: "center", paddingTop: 24 }}>No alerts</div>
         ) : (
-          alerts.map(a => <AlertCard key={a.id} alert={a} />)
+          alerts.map(a => <AlertCard key={a.id} alert={a} onOpenAlerts={onOpenAlerts} />)
         )}
       </div>
     </div>
@@ -419,6 +421,7 @@ function AuthPage({ onLogin }) {
 
 export default function App() {
   const [alerts, setAlerts] = useState([]);
+  const [selectedAlert, setSelectedAlerts] = useState(null);
   const [watchlists, setWatchlists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
@@ -474,6 +477,14 @@ export default function App() {
     }
   }
 
+  async function openAlert(alert) {
+    setSelectedAlerts(alert);
+    if (!alert.is_read) {
+      await fetch(`${API_BASE}/alerts/${alert.id}/read`, { method: "PATCH" });
+      setAlerts(prev => prev.map(a => a.id == alert.id ? {...a, is_read: true} : a));
+    }
+  }
+  
   //////////////////
   if (!currentUser) {
     return <AuthPage onLogin={(email) => setCurrentUser(email)} />;
@@ -517,6 +528,7 @@ export default function App() {
             watchlists={watchlists}
             loading={loading}
             onWatchlistSaved={fetchData}
+            onOpenAlerts={openAlert}
           />
         ))}
       </div>
