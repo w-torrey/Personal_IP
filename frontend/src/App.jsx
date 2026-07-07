@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-//const API_BASE = "http://100.65.81.57:8000";
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://100.65.81.57:8000";
 
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
 
