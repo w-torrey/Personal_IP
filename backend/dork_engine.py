@@ -31,7 +31,6 @@ def build_query(
 
     return " ".join(parts)
 
-
 def run_dork(
     keywords: list = None,
     exclude_keywords: list = None,
