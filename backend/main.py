@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
-from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email
+from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email, mark_as_read
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import auth
 import os
@@ -107,6 +107,12 @@ def monitor(request: DorkRequest):
 def alerts():
     return get_new_alerts()
 
+@app.patch("/alerts/{alert_id}/read")
+def read(alert_id: int):
+    updated = mark_as_read(alert_id)
+    if not updated: raise HTTPException(status_code=404, detail="Alert not found")
+    return {"id": alert_id, "is_read": True}
+
 @app.get("/watchlists")
 def get_watchlists():
     return get_all_watchlists()
@@ -180,3 +186,4 @@ def delete_watchlist(watchlist_id:int):
     deleted = delete_watchlist_db(watchlist_id)
     if not deleted: raise HTTPException(status_code=404, detail="Watchlist not found")
     return {"deleted": watchlist_id}
+

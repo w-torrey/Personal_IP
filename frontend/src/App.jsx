@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const API_BASE = "http://100.65.81.57:8000";
+
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
 
 const CATEGORY_COLORS = {
@@ -23,6 +24,8 @@ const INPUT_STYLE = {
   fontSize: 13, outline: "none", boxSizing: "border-box",
 };
 
+
+
 function timeAgo(dateStr) {
   if (!dateStr) return "Unknown";
   let str = dateStr;
@@ -37,6 +40,27 @@ function timeAgo(dateStr) {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function buildQueryPreview(qp) {
+  if (!qp) return "";
+  const parts = [];
+  (qp.keywords || []).forEach(k => parts.push(`"${k}"`));
+  const inc = qp.include_sites || [];
+  if (inc.length) parts.push(`(${inc.map(s => `site:${s}`).join(" OR ")})`);
+  (qp.exclude_sites || []).forEach(s => parts.push(`-site:${s}`));
+  return parts.join(" ");
+}
+
+function highlightMatches(text, keywords) {
+  if (!text || !keywords || keywords.length === 0) return text;
+  const escaped = keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+  return String(text).split(regex).map((part, i) =>
+    keywords.some(k => k.toLowerCase() === part.toLowerCase())
+      ? <mark key={i} style={{ background: "#7F77DD33", color: "#c4bffb", padding: "0 2px", borderRadius: 3 }}>{part}</mark>
+      : part
+  );
 }
 
 function TagInput({ label, placeholder, values, onChange }) {
@@ -69,7 +93,7 @@ function TagInput({ label, placeholder, values, onChange }) {
   );
 }
 
-function AlertCard({ alert }) {
+function AlertCard({ alert, onOpenAlerts }) {
   const cat = alert.category || "Custom";
   const accent = CATEGORY_COLORS[cat] || CATEGORY_COLORS["Custom"];
   const getFavicon = (url) => {
@@ -77,11 +101,11 @@ function AlertCard({ alert }) {
     catch { return null; }
   };
   return (
-    <div style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderLeft: `3px solid ${accent}`, borderRadius: "10px", padding: "14px 16px", marginBottom: "10px", cursor: "default" }}>
+    <div onClick={() => onOpenAlerts(alert)} style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderLeft: `3px solid ${accent}`, borderRadius: "10px", padding: "14px 16px", marginBottom: "10px", opacity: alert.is_read ? 0.5 : 1, cursor: "pointer" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#e8e6ff", lineHeight: 1.4, flex: 1 }}>
           {alert.link ? (
-            <a href={alert.link} target="_blank" rel="noopener noreferrer"
+            <a onClick={e => e.stopPropagation()} href={alert.link} target="_blank" rel="noopener noreferrer"
               style={{ color: "#e8e6ff", textDecoration: "none" }}
               onMouseEnter={e => e.target.style.color = accent}
               onMouseLeave={e => e.target.style.color = "#e8e6ff"}>
@@ -90,7 +114,7 @@ function AlertCard({ alert }) {
           ) : (alert.title || "Untitled")}
         </p>
         {alert.link && (
-          <a href={alert.link} target="_blank" rel="noopener noreferrer" style={{ color: "#555", flexShrink: 0, marginTop: 2 }}>
+          <a onClick={e => e.stopPropagation()} href={alert.link} target="_blank" rel="noopener noreferrer" style={{ color: "#555", flexShrink: 0, marginTop: 2 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
               <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
@@ -315,7 +339,7 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   );
 }
 
-function Column({ category, alerts, watchlists, loading, onWatchlistSaved }) {
+function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpenAlerts }) {
   const accent = CATEGORY_COLORS[category];
   const bg = CATEGORY_BG[category];
   const [showManage, setShowManage] = useState(false);
@@ -341,7 +365,7 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved }) {
         ) : alerts.length === 0 ? (
           <div style={{ color: "#333", fontSize: "12px", textAlign: "center", paddingTop: 24 }}>No alerts</div>
         ) : (
-          alerts.map(a => <AlertCard key={a.id} alert={a} />)
+          alerts.map(a => <AlertCard key={a.id} alert={a} onOpenAlerts={onOpenAlerts} />)
         )}
       </div>
     </div>
@@ -420,9 +444,51 @@ function AuthPage({ onLogin }) {
 }
 /////////////////////
 
+function AlertPanel({ alert, onClose }) {
+  const accent = CATEGORY_COLORS[alert.category] || CATEGORY_COLORS["Custom"];
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "flex-end", zIndex: 400 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 440, maxWidth: "90vw", height: "100vh", background: "#13131c", borderLeft: "0.5px solid #2a2a38", padding: "24px 28px", overflowY: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: accent, background: `${accent}22`, padding: "3px 10px", borderRadius: 20 }}>{alert.category}</span>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#666", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
+        </div>
+
+        <a href={alert.link} target="_blank" rel="noopener noreferrer" style={{ color: "#e8e6ff", fontSize: 16, fontWeight: 600, textDecoration: "none", lineHeight: 1.4, display: "block", marginBottom: 12 }}>
+          {highlightMatches(alert.title || "Untitled", alert.query_params?.keywords)}
+        </a>
+
+        {alert.snippet && (
+          <p style={{ color: "#aaa", fontSize: 13, lineHeight: 1.6, marginBottom: 18 }}>{highlightMatches(alert.snippet, alert.query_params?.keywords)}</p>
+        )}
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 11, color: "#666", marginBottom: 18 }}>
+          {alert.source && <span>{alert.source}</span>}
+          <span>· {alert.label || "Unnamed Watchlist"}</span>
+          <span>· {timeAgo(alert.fetched_at)}</span>
+        </div>
+
+        {buildQueryPreview(alert.query_params) && (
+          <div style={{ borderTop: "0.5px solid #1e1e2e", paddingTop: 16 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 10, color: "#555", letterSpacing: "0.06em" }}>WHY IT WAS HIT</p>
+            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#888", lineHeight: 1.5 }}>
+              Surfaced by watchlist <span style={{ color: "#e8e6ff" }}>{alert.label || "Unnamed Watchlist"}</span>. Its query matched this result:
+            </p>
+            <div style={{ background: "#0a0a12", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "10px 12px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 10, color: "#444", letterSpacing: "0.04em" }}>QUERY</p>
+              <p style={{ margin: 0, fontSize: 11, color: "#7F77DD", fontFamily: "monospace", wordBreak: "break-all" }}>{buildQueryPreview(alert.query_params)}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 export default function App() {
   const [alerts, setAlerts] = useState([]);
+  const [selectedAlert, setSelectedAlerts] = useState(null);
   const [watchlists, setWatchlists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
@@ -430,6 +496,7 @@ export default function App() {
   const [showRunConfirm, setShowRunConfirm] = useState(false);
   const [runningNow, setRunningNow] = useState(false);
   const [status, setStatus] = useState("");
+
 
 
   //////////////////
@@ -478,6 +545,14 @@ export default function App() {
     }
   }
 
+  async function openAlert(alert) {
+    setSelectedAlerts(alert);
+    if (!alert.is_read) {
+      await fetch(`${API_BASE}/alerts/${alert.id}/read`, { method: "PATCH" });
+      setAlerts(prev => prev.map(a => a.id == alert.id ? {...a, is_read: true} : a));
+    }
+  }
+  
   //////////////////
   if (!currentUser) {
     return <AuthPage onLogin={(email) => setCurrentUser(email)} />;
@@ -488,6 +563,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#0a0a12", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", display: "flex", flexDirection: "column" }}>
       {showAddModal && <WatchlistFormModal onClose={() => setShowAddModal(false)} onSaved={fetchData} />}
       {showRunConfirm && <ConfirmRunModal onConfirm={runNow} onClose={() => setShowRunConfirm(false)} />}
+      {selectedAlert && <AlertPanel alert={selectedAlert} onClose={() => setSelectedAlerts(null)} />}
 
       <div style={{ padding: "16px 28px", borderBottom: "0.5px solid #1a1a28", display: "flex", alignItems: "center", gap: 16, background: "#0a0a12", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -521,6 +597,7 @@ export default function App() {
             watchlists={watchlists}
             loading={loading}
             onWatchlistSaved={fetchData}
+            onOpenAlerts={openAlert}
           />
         ))}
       </div>
