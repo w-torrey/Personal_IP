@@ -85,7 +85,7 @@ def update_watchlist(watchlist_id: int, label: str, keywords: list = None,
         })
         conn.commit()
 
-def get_new_alerts():
+def get_alerts():
     with engine.connect() as conn:
         result = conn.execute(text("""
             SELECT r.id, w.category, w.label, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at, r.is_read, r.watchlist_id, w.query_params

@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
-from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email, mark_as_read
+from database import save_results, get_or_create_watchlist, get_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email, mark_as_read
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import auth
 import os
@@ -105,7 +105,7 @@ def monitor(request: DorkRequest):
 
 @app.get("/alerts")
 def alerts():
-    return get_new_alerts()
+    return get_alerts()
 
 @app.patch("/alerts/{alert_id}/read")
 def read(alert_id: int):
