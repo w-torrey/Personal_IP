@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
-from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email
+from database import save_results, get_or_create_watchlist, get_new_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email, mark_as_read
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import auth
 import os
@@ -42,6 +42,7 @@ app.add_middleware(
 class DorkRequest(BaseModel):
     label: Optional[str] = None
     keywords: Optional[list[str]] = None
+    exclude_keywords: Optional[list[str]] = None
     include_sites: Optional[list[str]] = None
     exclude_sites: Optional[list[str]] = None
     hours: Optional[int] = 24
@@ -67,6 +68,7 @@ def search(request: DorkRequest):
     validate_request(request)
     result = run_dork(
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         hours=request.hours,
@@ -83,12 +85,14 @@ def monitor(request: DorkRequest):
     watchlist_id = get_or_create_watchlist(
         label=label,
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         category=request.category,
     )
     result = run_dork(
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         hours=request.hours,
@@ -103,6 +107,12 @@ def monitor(request: DorkRequest):
 def alerts():
     return get_new_alerts()
 
+@app.patch("/alerts/{alert_id}/read")
+def read(alert_id: int):
+    updated = mark_as_read(alert_id)
+    if not updated: raise HTTPException(status_code=404, detail="Alert not found")
+    return {"id": alert_id, "is_read": True}
+
 @app.get("/watchlists")
 def get_watchlists():
     return get_all_watchlists()
@@ -114,6 +124,7 @@ def create_watchlist(request: DorkRequest):
     watchlist_id = get_or_create_watchlist(
         label=label,
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         category=request.category,
@@ -136,6 +147,7 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
         watchlist_id=watchlist_id,
         label=label,
         keywords=request.keywords,
+        exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         category=request.category,
@@ -148,6 +160,8 @@ class AuthRequest(BaseModel):
 
 @app.post("/auth/register")
 def register(request: AuthRequest):
+    if "@" not in request.email or "." not in request.email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Invalid email")
     if get_user_by_email(request.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = auth.hash_password(request.password)
@@ -172,3 +186,4 @@ def delete_watchlist(watchlist_id:int):
     deleted = delete_watchlist_db(watchlist_id)
     if not deleted: raise HTTPException(status_code=404, detail="Watchlist not found")
     return {"deleted": watchlist_id}
+

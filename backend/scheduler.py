@@ -19,6 +19,7 @@ def run_all_watchlists():
         qp = w.get("query_params") or {}
         result = run_dork(
             keywords=qp.get("keywords"),
+            exclude_keywords=qp.get("exclude_keywords"),
             include_sites=qp.get("include_sites"),
             exclude_sites=qp.get("exclude_sites"),
         )
