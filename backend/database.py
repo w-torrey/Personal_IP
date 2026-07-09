@@ -91,7 +91,6 @@ def get_alerts():
             SELECT r.id, w.category, w.label, r.title, r.link, r.snippet, r.source, r.date_found, r.fetched_at, r.is_read, r.watchlist_id, w.query_params
             FROM results r
             JOIN watchlists w ON r.watchlist_id = w.id
-            WHERE r.is_new = TRUE
             ORDER BY r.fetched_at DESC
         """))
         rows = result.fetchall()
