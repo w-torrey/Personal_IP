@@ -162,3 +162,48 @@ def mark_as_read(alert_id: int):
         result = conn.execute(text("UPDATE results SET is_read = TRUE WHERE id = :id"), {"id": alert_id})
         conn.commit()
         return result.rowcount
+
+def get_new_alerts(watchlist_id: int):
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT r.id, r.title, r.snippet, r.source, r.date_found, r.watchlist_id
+            FROM results r
+            JOIN watchlists w ON r.watchlist_id = w.id
+            WHERE r.watchlist_id = :watchlist_id AND r.is_new = TRUE
+            ORDER BY r.fetched_at DESC
+        """), {"watchlist_id": watchlist_id})
+        rows = result.fetchall()
+    return [
+        {
+            "id": row[0],
+            "title": row[1],
+            "snippet": row[2],
+            "source": row[3],
+            "date_found": row[4],
+            "watchlist_id": row[5],
+        }
+        for row in rows
+    ]
+
+def get_all_alerts(watchlist_id: int):
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT r.id, r.title, r.snippet, r.source, r.date_found, r.watchlist_id
+            FROM results r
+            JOIN watchlists w ON r.watchlist_id = w.id
+            WHERE r.watchlist_id = :watchlist_id
+            ORDER BY r.fetched_at DESC
+        """), {"watchlist_id": watchlist_id})
+        rows = result.fetchall()
+    return [
+        {
+            "id": row[0],
+            "title": row[1],
+            "snippet": row[2],
+            "source": row[3],
+            "date_found": row[4],
+            "watchlist_id": row[5],
+        }
+        for row in rows
+    ]
+
