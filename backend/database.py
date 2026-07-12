@@ -61,7 +61,7 @@ def get_or_create_watchlist(label: str, keywords: list = None, exclude_keywords:
         conn.commit()
         return result.fetchone()[0]
 
-def update_watchlist(watchlist_id: int, label: str, keywords: list = None,
+def db_update_watchlist(watchlist_id: int, label: str, keywords: list = None,
                       exclude_keywords: list = None, include_sites: list = None,
                       exclude_sites: list = None, category: str = "Custom"):
     query_params = json.dumps({
@@ -132,7 +132,7 @@ def get_all_watchlists():
 def delete_watchlist_db(watchlist_id):
     with engine.connect() as conn:
         conn.execute(text("DELETE FROM results WHERE watchlist_id = :id"), {"id": watchlist_id})
-        result = conn.execute(text("DELETE FROM watchlists where id = :id"), {"id": watchlist_id})
+        result = conn.execute(text("DELETE FROM watchlists WHERE id = :id"), {"id": watchlist_id})
         conn.commit()
         return result.rowcount
 

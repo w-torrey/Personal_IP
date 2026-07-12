@@ -554,7 +554,7 @@ export default function App() {
     setSelectedAlerts(alert);
     if (!alert.is_read) {
       await fetch(`${API_BASE}/alerts/${alert.id}/read`, { method: "PATCH" });
-      setAlerts(prev => prev.map(a => a.id == alert.id ? {...a, is_read: true} : a));
+      setAlerts(prev => prev.map(a => a.id === alert.id ? {...a, is_read: true} : a));
     }
   }
   

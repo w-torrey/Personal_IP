@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
-from database import save_results, get_or_create_watchlist, get_alerts, get_all_watchlists, delete_watchlist_db, create_user, get_user_by_email, mark_as_read
+from database import save_results, get_or_create_watchlist, get_alerts, get_all_watchlists, db_update_watchlist, delete_watchlist_db, create_user, get_user_by_email, mark_as_read
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import auth
 import os
@@ -141,7 +141,6 @@ app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")
 
 @app.put("/watchlist/{watchlist_id}")
 def update_watchlist(watchlist_id: int, request: DorkRequest):
-    from database import update_watchlist as db_update_watchlist
     label = resolve_label(request)
     db_update_watchlist(
         watchlist_id=watchlist_id,
