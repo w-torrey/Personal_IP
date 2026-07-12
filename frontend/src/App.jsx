@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const version = "1.0.0"
+const version = "1.0.1"
 
 const API_BASE = "http://100.65.81.57:8000";
 
