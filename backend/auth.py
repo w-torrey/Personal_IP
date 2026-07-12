@@ -4,9 +4,11 @@ from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+##load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+##SECRET_KEY = os.getenv("SECRET_KEY")
+
+SECRET_KEY="uNc91u9nUct493qTunvHy9w45"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
