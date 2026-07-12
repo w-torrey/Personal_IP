@@ -347,7 +347,7 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpe
   const [showManage, setShowManage] = useState(false);
 
   return (
-    <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", background: "#0f0f16", border: "0.5px solid #1e1e2e", borderRadius: "14px", overflow: "hidden" }}>
+    <div style={{ flex: "1 1 0", minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column", background: "#0f0f16", border: "0.5px solid #1e1e2e", borderRadius: "14px", overflow: "hidden", overflowY: "auto"}}>
       {showManage && (
         <ManageWatchlistsModal category={category} watchlists={watchlists} onClose={() => setShowManage(false)} onSaved={() => { setShowManage(false); onWatchlistSaved(); }} />
       )}
@@ -441,7 +441,7 @@ function AuthPage({ onLogin }) {
           </p>
         </div>
       </div>
-      <div style={{ position: "fixed", bottom: "12px", left: "16px", color: "#667", fontSize: "12px" }}>
+      <div style={{ position: "fixed", bottom: "12px", left: "16px", color: "#666", fontSize: "12px" }}>
         v{version}
       </div>
     </div>
@@ -565,7 +565,7 @@ export default function App() {
   //////////////
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a12", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100vh", background: "#0a0a12", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", display: "flex", flexDirection: "column" }}>
       {showAddModal && <WatchlistFormModal onClose={() => setShowAddModal(false)} onSaved={fetchData} />}
       {showRunConfirm && <ConfirmRunModal onConfirm={runNow} onClose={() => setShowRunConfirm(false)} />}
       {selectedAlert && <AlertPanel alert={selectedAlert} onClose={() => setSelectedAlerts(null)} />}
