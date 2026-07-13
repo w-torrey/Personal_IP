@@ -663,6 +663,9 @@ export default function App() {
           <span style={{ fontSize: 15, fontWeight: 700, color: "#e8e6ff", letterSpacing: "0.05em" }}>
             INDEX<span style={{ color: "#7F77DD" }}>PULSE</span>
           </span>
+          <span style={{ position: "fixed", bottom: "12px", left: "16px", color: "#666", fontSize: "12px" }}>
+                 v{version}
+         </span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           {status && <span style={{ fontSize: 11, color: "#7F77DD" }}>{status}</span>}
@@ -674,9 +677,6 @@ export default function App() {
           <button onClick={() => setShowRunConfirm(true)} disabled={runningNow} style={{ background: "transparent", border: "0.5px solid #7F77DD44", borderRadius: 8, padding: "6px 12px", color: "#7F77DD", fontSize: 11, cursor: runningNow ? "not-allowed" : "pointer", opacity: runningNow ? 0.5 : 1 }}> Run now</button>
           <button onClick={() => setShowAddModal(true)} style={{ background: "#7F77DD", border: "none", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Add watchlist</button>
         </div>
-        <div style={{ position: "fixed", bottom: "12px", left: "16px", color: "#666", fontSize: "12px" }}>
-        v{version}
-      </div>
       </div>
 
       {/* ── Kanban board: one Column per category ── */}
