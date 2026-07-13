@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 
+// App version shown in the auth screen footer
 const version = "1.0.1"
 
+// Backend URL — all fetch calls point here
 const API_BASE = "http://100.65.81.57:8000";
 
+// The four fixed alert categories shown as columns on the dashboard
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
 
+// Accent colors for each category (used on card borders, badges, column headers)
 const CATEGORY_COLORS = {
   "Exec Watch": "#7F77DD",
   "Fraud": "#D85A30",
@@ -13,6 +17,7 @@ const CATEGORY_COLORS = {
   "Custom": "#888780",
 };
 
+// Translucent version of each accent color used as column header backgrounds
 const CATEGORY_BG = {
   "Exec Watch": "rgba(127,119,221,0.12)",
   "Fraud": "rgba(216,90,48,0.12)",
@@ -20,14 +25,17 @@ const CATEGORY_BG = {
   "Custom": "rgba(136,135,128,0.12)",
 };
 
+// Shared style object for all text inputs and selects across the app
 const INPUT_STYLE = {
   width: "100%", background: "#0f0f16", border: "0.5px solid #2a2a38",
   borderRadius: 8, padding: "9px 12px", color: "#e8e6ff",
   fontSize: 13, outline: "none", boxSizing: "border-box",
 };
 
-
-
+// ─── Utility: timeAgo ────────────────────────────────────────────────────────
+// Converts a timestamp string from the DB into a human-readable relative label
+// e.g. "3h ago", "just now", "2d ago"
+// Handles both "2024-01-01 12:00:00" and ISO formats by normalizing to UTC
 function timeAgo(dateStr) {
   if (!dateStr) return "Unknown";
   let str = dateStr;
@@ -44,6 +52,9 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+// ─── Utility: buildQueryPreview ───────────────────────────────────────────────
+// Reconstructs the Google dork query string from a watchlist's query_params object
+// Used in AlertPanel ("why it was hit") and WatchlistFormModal (live preview)
 function buildQueryPreview(qp) {
   if (!qp) return "";
   const parts = [];
@@ -54,6 +65,9 @@ function buildQueryPreview(qp) {
   return parts.join(" ");
 }
 
+// ─── Utility: highlightMatches ────────────────────────────────────────────────
+// Wraps any keyword matches in the given text with a <mark> element
+// Used in AlertPanel to highlight the keywords that caused the result to match
 function highlightMatches(text, keywords) {
   if (!text || !keywords || keywords.length === 0) return text;
   const escaped = keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
@@ -65,6 +79,10 @@ function highlightMatches(text, keywords) {
   );
 }
 
+// ─── Component: TagInput ──────────────────────────────────────────────────────
+// Reusable pill-style tag input. Press Enter or comma to confirm a tag.
+// Backspace on empty input removes the last tag.
+// Used inside WatchlistFormModal for keywords, exclude keywords, include sites, exclude sites.
 function TagInput({ label, placeholder, values, onChange }) {
   const [input, setInput] = useState("");
   function handleKey(e) {
@@ -95,9 +113,15 @@ function TagInput({ label, placeholder, values, onChange }) {
   );
 }
 
+// ─── Component: AlertCard ─────────────────────────────────────────────────────
+// A single search result card shown inside a Column.
+// Clicking it opens the full AlertPanel slide-in.
+// Shows: title (linked), snippet (2-line clamped), favicon, source, watchlist label, time ago.
+// The left border color is the category accent. Dimmed (opacity 0.5) if already read.
 function AlertCard({ alert, onOpenAlerts }) {
   const cat = alert.category || "Custom";
   const accent = CATEGORY_COLORS[cat] || CATEGORY_COLORS["Custom"];
+  // Fetches the favicon for the alert's source domain via Google's favicon service
   const getFavicon = (url) => {
     try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; }
     catch { return null; }
@@ -105,6 +129,7 @@ function AlertCard({ alert, onOpenAlerts }) {
   return (
     <div onClick={() => onOpenAlerts(alert)} style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderLeft: `3px solid ${accent}`, borderRadius: "10px", padding: "14px 16px", marginBottom: "10px", opacity: alert.is_read ? 0.5 : 1, cursor: "pointer" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+        {/* Title — wraps naturally; wordBreak prevents long URLs from overflowing the card */}
         <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#e8e6ff", lineHeight: 1.4, flex: 1, wordBreak: "break-word" }}>
           {alert.link ? (
             <a onClick={e => e.stopPropagation()} href={alert.link} target="_blank" rel="noopener noreferrer"
@@ -115,6 +140,7 @@ function AlertCard({ alert, onOpenAlerts }) {
             </a>
           ) : (alert.title || "Untitled")}
         </p>
+        {/* External link icon — opens the URL directly without opening AlertPanel */}
         {alert.link && (
           <a onClick={e => e.stopPropagation()} href={alert.link} target="_blank" rel="noopener noreferrer" style={{ color: "#555", flexShrink: 0, marginTop: 2 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -124,11 +150,13 @@ function AlertCard({ alert, onOpenAlerts }) {
           </a>
         )}
       </div>
+      {/* Snippet — clamped to 2 lines max */}
       {alert.snippet && (
         <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#888", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {alert.snippet}
         </p>
       )}
+      {/* Footer row: favicon, source domain, watchlist label, time ago */}
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
         {alert.link && getFavicon(alert.link) && (
           <img src={getFavicon(alert.link)} width={14} height={14} style={{ borderRadius: 3, flexShrink: 0 }} onError={e => e.target.style.display = "none"} />
@@ -142,6 +170,11 @@ function AlertCard({ alert, onOpenAlerts }) {
   );
 }
 
+// ─── Component: WatchlistFormModal ────────────────────────────────────────────
+// Modal for creating a new watchlist (POST /watchlist) or editing one (PUT /watchlist/:id).
+// Contains four TagInput fields for query parameters plus a category dropdown.
+// Shows a live dork query preview that updates as you type.
+// Validates that at least keywords OR include_sites is provided before submitting.
 function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   const isEdit = !!watchlist;
   const qp = watchlist?.query_params || {};
@@ -155,6 +188,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
 
+  // Rebuild the dork query preview string every time any tag field changes
   useEffect(() => {
     const parts = [];
     keywords.forEach(k => parts.push(`"${k}"`));
@@ -211,6 +245,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
               <TagInput label="Exclude sites" placeholder="e.g. instagram.com, linkedin.com" values={excludeSites} onChange={setExcludeSites} />
             </div>
           </div>
+          {/* Live dork query preview — shows exactly what will be sent to SerpAPI */}
           {preview && (
             <div style={{ background: "#0a0a12", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "10px 12px" }}>
               <p style={{ margin: "0 0 4px", fontSize: 10, color: "#444", letterSpacing: "0.04em" }}>QUERY PREVIEW</p>
@@ -236,6 +271,9 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   );
 }
 
+// ─── Component: ConfirmRunModal ───────────────────────────────────────────────
+// Simple confirmation dialog shown before triggering POST /run-now.
+// Prevents accidental full runs which consume SerpAPI quota.
 function ConfirmRunModal({ onConfirm, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={onClose}>
@@ -256,6 +294,11 @@ function ConfirmRunModal({ onConfirm, onClose }) {
   );
 }
 
+// ─── Component: ManageWatchlistsModal ─────────────────────────────────────────
+// Modal opened from the "edit" button in a Column header.
+// Lists all watchlists belonging to that category with Edit and Delete buttons.
+// Delete uses a two-step confirmation (click Delete → click Confirm) to prevent accidents.
+// Clicking Edit swaps this modal out for WatchlistFormModal in edit mode.
 function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   const [editingWatchlist, setEditingWatchlist] = useState(null);
   const accent = CATEGORY_COLORS[category];
@@ -277,6 +320,7 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
     }
   }
 
+  // If editing, swap the whole modal for the edit form
   if (editingWatchlist) {
     return <WatchlistFormModal watchlist={editingWatchlist} onClose={() => setEditingWatchlist(null)} onSaved={() => { setEditingWatchlist(null); onSaved(); }} />;
   }
@@ -297,11 +341,13 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
               <div key={w.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0f0f16", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "10px 14px" }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, color: "#e8e6ff", fontWeight: 500 }}>{w.label}</p>
+                  {/* Show excluded sites as a hint so you can see the query at a glance */}
                   {w.query_params?.exclude_sites?.length > 0 && (
                     <p style={{ margin: "3px 0 0", fontSize: 11, color: "#555" }}>excl. {w.query_params.exclude_sites.join(", ")}</p>
                   )}
                 </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    {/* Two-step delete: first click shows Confirm/Cancel, second click calls DELETE */}
                     {confirmingId === w.id ? (
                       <>
                         <button onClick={() => handleDelete(w.id)} disabled={deletingId === w.id}
@@ -341,6 +387,11 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   );
 }
 
+// ─── Component: Column ────────────────────────────────────────────────────────
+// One vertical Kanban column for a single category.
+// Header shows the category name, alert count badge, and an "edit" button
+// that opens ManageWatchlistsModal for that category.
+// Body scrolls independently and renders an AlertCard for each alert.
 function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpenAlerts }) {
   const accent = CATEGORY_COLORS[category];
   const bg = CATEGORY_BG[category];
@@ -351,6 +402,7 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpe
       {showManage && (
         <ManageWatchlistsModal category={category} watchlists={watchlists} onClose={() => setShowManage(false)} onSaved={() => { setShowManage(false); onWatchlistSaved(); }} />
       )}
+      {/* Sticky column header — stays visible while the card list scrolls */}
       <div style={{ padding: "14px 18px", borderBottom: "0.5px solid #1e1e2e", background: bg, display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 1 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: accent, flexShrink: 0, boxShadow: `0 0 6px ${accent}88` }} />
         <span style={{ fontSize: "13px", fontWeight: 600, color: "#e8e6ff", letterSpacing: "0.03em" }}>{category}</span>
@@ -361,6 +413,7 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpe
           edit
         </button>
       </div>
+      {/* Scrollable card list */}
       <div style={{ padding: "12px", overflowY: "auto", flex: 1 }}>
         {loading ? (
           <div style={{ color: "#444", fontSize: "12px", textAlign: "center", paddingTop: 24 }}>Loading...</div>
@@ -374,7 +427,11 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpe
   );
 }
 
-////////////////////////////////////
+// ─── Component: AuthPage ──────────────────────────────────────────────────────
+// Full-screen login / register screen shown when no JWT is in localStorage.
+// On successful login, stores the JWT and email in localStorage and calls onLogin()
+// to swap the app into the main dashboard view.
+// On register success, switches back to login mode with a success message.
 function AuthPage({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -427,8 +484,10 @@ function AuthPage({ onLogin }) {
         </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={INPUT_STYLE} />
+          {/* Enter key submits the form from the password field */}
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" style={INPUT_STYLE}
             onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+          {/* Error text is green for "account created" messages, red for actual errors */}
           {error && <p style={{ margin: 0, fontSize: 12, color: error.includes("created") ? "#1D9E75" : "#D85A30" }}>{error}</p>}
           <button onClick={handleSubmit} disabled={loading} style={{ padding: "10px", borderRadius: 8, border: "none", background: "#7F77DD", color: "#fff", fontSize: 13, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, marginTop: 4 }}>
             {loading ? "..." : isLogin ? "Sign in" : "Create account"}
@@ -447,8 +506,12 @@ function AuthPage({ onLogin }) {
     </div>
   );
 }
-/////////////////////
 
+// ─── Component: AlertPanel ────────────────────────────────────────────────────
+// Slide-in drawer from the right that shows full details for a clicked alert.
+// Highlights keyword matches in the title and snippet.
+// Shows a "Why it was hit" section with the reconstructed dork query.
+// Clicking the backdrop closes the panel.
 function AlertPanel({ alert, onClose }) {
   const accent = CATEGORY_COLORS[alert.category] || CATEGORY_COLORS["Custom"];
   return (
@@ -459,20 +522,24 @@ function AlertPanel({ alert, onClose }) {
           <button onClick={onClose} style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#666", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
         </div>
 
+        {/* Full title as a clickable link with keyword highlights */}
         <a href={alert.link} target="_blank" rel="noopener noreferrer" style={{ color: "#e8e6ff", fontSize: 16, fontWeight: 600, textDecoration: "none", lineHeight: 1.4, display: "block", marginBottom: 12 }}>
           {highlightMatches(alert.title || "Untitled", alert.query_params?.keywords)}
         </a>
 
+        {/* Full snippet (not clamped here) with keyword highlights */}
         {alert.snippet && (
           <p style={{ color: "#aaa", fontSize: 13, lineHeight: 1.6, marginBottom: 18 }}>{highlightMatches(alert.snippet, alert.query_params?.keywords)}</p>
         )}
 
+        {/* Metadata row: source domain, watchlist label, time ago */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 11, color: "#666", marginBottom: 18 }}>
           {alert.source && <span>{alert.source}</span>}
           <span>· {alert.label || "Unnamed Watchlist"}</span>
           <span>· {timeAgo(alert.fetched_at)}</span>
         </div>
 
+        {/* "Why it was hit" — shows the dork query that surfaced this result */}
         {buildQueryPreview(alert.query_params) && (
           <div style={{ borderTop: "0.5px solid #1e1e2e", paddingTop: 16 }}>
             <p style={{ margin: "0 0 8px", fontSize: 10, color: "#555", letterSpacing: "0.06em" }}>WHY IT WAS HIT</p>
@@ -491,6 +558,23 @@ function AlertPanel({ alert, onClose }) {
 }
 
 
+// ─── Component: App (root) ────────────────────────────────────────────────────
+// Top-level component. Manages global state and orchestrates the whole dashboard.
+//
+// State:
+//   alerts        — all unread results fetched from GET /alerts
+//   watchlists    — all saved monitors from GET /watchlists
+//   selectedAlert — the alert currently open in AlertPanel (null = closed)
+//   currentUser   — email from localStorage; null means the user is logged out
+//   showAddModal  — controls WatchlistFormModal visibility
+//   showRunConfirm— controls ConfirmRunModal visibility
+//   runningNow    — true while POST /run-now is in flight (disables button)
+//   status        — short status message shown in the header during a run
+//
+// Data flow:
+//   fetchData() → sets alerts + watchlists → passed down to Column → AlertCard
+//   openAlert()  → sets selectedAlert + PATCHes the alert as read
+//   runNow()     → POST /run-now → then fetchData() to refresh
 export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [selectedAlert, setSelectedAlerts] = useState(null);
@@ -502,9 +586,7 @@ export default function App() {
   const [runningNow, setRunningNow] = useState(false);
   const [status, setStatus] = useState("");
 
-
-
-  //////////////////
+  // currentUser is seeded from localStorage so the session survives a page reload
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("userEmail"));
 
   function handleLogout() {
@@ -512,9 +594,9 @@ export default function App() {
     localStorage.removeItem("userEmail");
     setCurrentUser(null);
   }
-  /////////////////
 
-
+  // Fetch alerts and watchlists in parallel; wrapped in useCallback so it's
+  // stable across renders and can be passed as onSaved/onWatchlistSaved prop
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -532,8 +614,10 @@ export default function App() {
     }
   }, []);
 
+  // Load data on first mount
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Triggers an immediate run of all watchlists on the server, then refreshes
   async function runNow() {
     setShowRunConfirm(false);
     setRunningNow(true);
@@ -550,6 +634,7 @@ export default function App() {
     }
   }
 
+  // Opens the AlertPanel for the clicked alert and marks it as read via PATCH
   async function openAlert(alert) {
     setSelectedAlerts(alert);
     if (!alert.is_read) {
@@ -557,19 +642,20 @@ export default function App() {
       setAlerts(prev => prev.map(a => a.id === alert.id ? {...a, is_read: true} : a));
     }
   }
-  
-  //////////////////
+
+  // Gate: show AuthPage if no logged-in user, otherwise show the dashboard
   if (!currentUser) {
     return <AuthPage onLogin={(email) => setCurrentUser(email)} />;
   }
-  //////////////
 
   return (
     <div style={{ height: "100vh", background: "#0a0a12", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", display: "flex", flexDirection: "column" }}>
+      {/* Global modals — rendered at the top level so they sit above everything */}
       {showAddModal && <WatchlistFormModal onClose={() => setShowAddModal(false)} onSaved={fetchData} />}
       {showRunConfirm && <ConfirmRunModal onConfirm={runNow} onClose={() => setShowRunConfirm(false)} />}
       {selectedAlert && <AlertPanel alert={selectedAlert} onClose={() => setSelectedAlerts(null)} />}
 
+      {/* ── Sticky top nav bar ── */}
       <div style={{ padding: "16px 28px", borderBottom: "0.5px solid #1a1a28", display: "flex", alignItems: "center", gap: 16, background: "#0a0a12", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -593,6 +679,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* ── Kanban board: one Column per category ── */}
       <div style={{ flex: 1, display: "flex", gap: 14, padding: "18px 24px", overflowX: "auto", alignItems: "stretch" }}>
         {CATEGORIES.map(cat => (
           <Column
