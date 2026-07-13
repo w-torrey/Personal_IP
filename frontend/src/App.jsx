@@ -105,7 +105,7 @@ function AlertCard({ alert, onOpenAlerts }) {
   return (
     <div onClick={() => onOpenAlerts(alert)} style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderLeft: `3px solid ${accent}`, borderRadius: "10px", padding: "14px 16px", marginBottom: "10px", opacity: alert.is_read ? 0.5 : 1, cursor: "pointer" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-        <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#e8e6ff", lineHeight: 1.4, flex: 1 }}>
+        <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#e8e6ff", lineHeight: 1.4, flex: 1, wordBreak: "break-word" }}>
           {alert.link ? (
             <a onClick={e => e.stopPropagation()} href={alert.link} target="_blank" rel="noopener noreferrer"
               style={{ color: "#e8e6ff", textDecoration: "none" }}
