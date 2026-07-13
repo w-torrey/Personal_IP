@@ -663,7 +663,7 @@ export default function App() {
           <span style={{ fontSize: 15, fontWeight: 700, color: "#e8e6ff", letterSpacing: "0.05em" }}>
             INDEX<span style={{ color: "#7F77DD" }}>PULSE</span>
           </span>
-          <span style={{ position: "fixed", top: "6px", left: "16px", color: "#666", fontSize: "12px" }}>
+          <span style={{ position: "fixed", top: "4px", left: "4px", color: "#666", fontSize: "12px" }}>
                  v{version}
          </span>
         </div>
