@@ -190,10 +190,12 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
     )
     return {"watchlist_id": watchlist_id, "label": label, "category": request.category}
 
+# decleration of username and password
 class AuthRequest(BaseModel):
     email: str
     password: str
 
+# create user, hashes password
 @app.post("/auth/register")
 def register(request: AuthRequest):
     if "@" not in request.email or "." not in request.email.split("@")[-1]:
@@ -204,6 +206,7 @@ def register(request: AuthRequest):
     create_user(request.email, hashed)
     return {"message": "Account created"}
 
+# login, checks username and password
 @app.post("/auth/login")
 def login(request: AuthRequest):
     user = get_user_by_email(request.email)
