@@ -8,7 +8,8 @@ load_dotenv()
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres@localhost:5432/IndexPulse")
 engine = create_engine(DB_URL)
 
-
+# Loops through results param and inserts info into results table, dedup logic within SQL query by URL
+# note the saved counter overcounts because it includes skipped inserts, for future consideration
 def save_results(watchlist_id: int, results: list):
     saved = 0
     skipped = 0
@@ -38,6 +39,7 @@ def save_results(watchlist_id: int, results: list):
     return {"saved": saved, "skipped": skipped}
 
 
+# takes in inputs for watchlist, converts to json and casts to jsonb, checks for dupes by label and returns id if so, if not, inserts watchlist and returns id for /monitor
 def get_or_create_watchlist(
     label: str,
     keywords: list = None,
@@ -45,7 +47,7 @@ def get_or_create_watchlist(
     include_sites: list = None,
     exclude_sites: list = None,
     category: str = "Uncategorized",
-) -> int:
+):
     query_params = json.dumps(
         {
             "keywords": keywords,
@@ -80,7 +82,9 @@ def get_or_create_watchlist(
         return result.fetchone()[0]
 
 
-def update_watchlist(
+# Overwites existing watchlist with new params, converts to json and casts to jsonb and updates database
+# note for future, needs to return some info for the endpoint to id a failure
+def db_update_watchlist(
     watchlist_id: int,
     label: str,
     keywords: list = None,
@@ -116,6 +120,7 @@ def update_watchlist(
         conn.commit()
 
 
+# Query to get all alerts to feed into /alerts enpoint
 def get_alerts():
     with engine.connect() as conn:
         result = conn.execute(text("""
@@ -144,6 +149,7 @@ def get_alerts():
     ]
 
 
+# Query to retrieve all watchlists with relavant info for /watchlists endpoint, also used in scheduler
 def get_all_watchlists():
     with engine.connect() as conn:
         result = conn.execute(text("""
@@ -162,18 +168,20 @@ def get_all_watchlists():
     ]
 
 
+# Query to delete a watchlist by id and all relavnt info related to it, returns 1 for success 0 for failure to find watchlist
 def delete_watchlist_db(watchlist_id):
     with engine.connect() as conn:
         conn.execute(
             text("DELETE FROM results WHERE watchlist_id = :id"), {"id": watchlist_id}
         )
         result = conn.execute(
-            text("DELETE FROM watchlists where id = :id"), {"id": watchlist_id}
+            text("DELETE FROM watchlists WHERE id = :id"), {"id": watchlist_id}
         )
         conn.commit()
         return result.rowcount
 
 
+# Query to insert new user info indcluding already hashed password into users table
 def create_user(email: str, hashed_password: str):
     with engine.connect() as conn:
         conn.execute(
@@ -186,6 +194,7 @@ def create_user(email: str, hashed_password: str):
         conn.commit()
 
 
+# Query to retrieve user hashed password by email for verification
 def get_user_by_email(email: str):
     with engine.connect() as conn:
         result = conn.execute(
@@ -200,6 +209,7 @@ def get_user_by_email(email: str):
     return {"email": row[0], "hashed_password": row[1]}
 
 
+# Query to update is_read flag in results and returns rowcount
 def mark_as_read(alert_id: int):
     with engine.connect() as conn:
         result = conn.execute(
@@ -261,3 +271,72 @@ def get_watchlist_alerts(watchlist_id: int):
     ]
 
 
+## This is the method to save the dossier we generate into our db,
+## we have an on conflict clause to update when a dossier already exists rather than write and store a whole new one
+def save_dossier(watchlist_id: int, summary: str):
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("""
+            INSERT INTO dossiers (watchlist_id, summary, updated_at)
+            VALUES (:watchlist_id, :summary, NOW())
+            ON CONFLICT (watchlist_id) DO UPDATE
+            SET summary = EXCLUDED.summary, updated_at = NOW()
+                                   """),
+            {"watchlist_id": watchlist_id, "summary": summary},
+        )
+        conn.commit()
+        return result.rowcount
+
+
+def get_dossiers():
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("""
+            SELECT d.watchlist_id, d.summary, d.updated_at, w.label
+            FROM dossiers d 
+            JOIN watchlists w ON w.id = d.watchlist_id
+                                   """),
+        )
+        rows = result.fetchall()
+        return [
+            {"watchlist_id": row[0], "summary": row[1], "updated_at": row[2], "label": row[3]}
+            for row in rows
+        ]
+
+
+def save_digest(
+    watchlist_id: int,
+    headline: str,
+    narrative: str,
+    severity: str,
+    alert_ids: list[int],
+):
+
+    alerts = json.dumps(alert_ids)
+
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("""
+            INSERT INTO digests (watchlist_id, headline, narrative, severity, alert_ids)
+            VALUES (:watchlist_id, :headline, :narrative, :severity, CAST(:alert_ids AS jsonb))
+                                   """),
+            {
+                "watchlist_id": watchlist_id,
+                "headline": headline,
+                "narrative": narrative,
+                "severity": severity,
+                "alert_ids": alerts,
+            },
+        )
+        conn.commit()
+        return result.rowcount
+
+
+def clear_new_flags(alert_ids: list[int]):
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("UPDATE results SET is_new = FALSE WHERE id = ANY(:ids)"),
+            {"ids": alert_ids},
+        )
+        conn.commit()
+        return result.rowcount
