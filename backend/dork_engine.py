@@ -1,20 +1,21 @@
-from serpapi import GoogleSearch # serp api client from google search
+from serpapi import GoogleSearch  # serp api client from google search
 import os
 import json
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
 
-load_dotenv() # able to read .env
+load_dotenv()  # able to read .env
+
 
 def build_query(
-        # this function basically creates phrases that are all wrapped in quotes to send to query
+    # this function basically creates phrases that are all wrapped in quotes to send to query
     keywords: list = None,
     # testing out excluding the keywords (-"word")
-    exclude_keywords: list =None,
+    exclude_keywords: list = None,
     include_sites: list = None,
     exclude_sites: list = None,
     # returns s ingle google query ("jackson" "morrow" "something")
 ) -> str:
-    parts = [] # takes in each query before joining
+    parts = []  # takes in each query before joining
 
     if keywords:
         for kw in keywords:
@@ -30,6 +31,7 @@ def build_query(
             parts.append(f"-site:{s}")
 
     return " ".join(parts)
+
 
 def run_dork(
     keywords: list = None,
@@ -49,29 +51,33 @@ def run_dork(
     if not query.strip():
         return {"success": False, "error": "At least one search parameter is required."}
 
-    search = GoogleSearch({
-        "engine": "google",
-        "q": query,
-        "google_domain": "google.com",
-        "hl": "en",
-        "gl": "us",
-        "tbs": "qdr:d",
-        "num": num_results,
-        "api_key": os.getenv("SERPAPI_KEY")
-    })
+    search = GoogleSearch(
+        {
+            "engine": "google",
+            "q": query,
+            "google_domain": "google.com",
+            "hl": "en",
+            "gl": "us",
+            "tbs": "qdr:d",
+            "num": num_results,
+            "api_key": os.getenv("SERPAPI_KEY"),
+        }
+    )
 
     data = search.get_dict()
     organic = data.get("organic_results", [])
 
     results = []
     for item in organic:
-        results.append({
-            "title": item.get("title"),
-            "link": item.get("link"),
-            "snippet": item.get("snippet"),
-            "source": item.get("source"),
-            "date": item.get("date"),
-        })
+        results.append(
+            {
+                "title": item.get("title"),
+                "link": item.get("link"),
+                "snippet": item.get("snippet"),
+                "source": item.get("source"),
+                "date": item.get("date"),
+            }
+        )
 
     return {"success": True, "query": query, "results": results}
 

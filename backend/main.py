@@ -6,23 +6,35 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from dork_engine import run_dork
-from database import save_results, get_or_create_watchlist, get_alerts, get_all_watchlists, db_update_watchlist, delete_watchlist_db, create_user, get_user_by_email, mark_as_read
+from database import (
+    save_results,
+    get_or_create_watchlist,
+    get_alerts,
+    get_all_watchlists,
+    db_update_watchlist,
+    delete_watchlist_db,
+    create_user,
+    get_user_by_email,
+    mark_as_read,
+)
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import auth
 import os
 
-@asynccontextmanager # lifetime manager (found through)
+
+@asynccontextmanager  # lifetime manager (found through)
 async def lifespan(app: FastAPI):
     start_scheduler(interval_hours=24)
-    yield # above just start the scheduler and below stop it
+    yield  # above just start the scheduler and below stop it
     stop_scheduler()
 
-#fast apit documentations title
+
+# fast apit documentations title
 app = FastAPI(
     title="IndexPulse API",
     description="OSINT Google Dork Monitoring Engine",
     version="0.3.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # allow thesecross origin resource sharing middlware
@@ -40,6 +52,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # take in information / query and allow API to manage as well
 # just need a class
@@ -61,7 +74,7 @@ def validate_request(request: DorkRequest):
     if not any([request.keywords, request.include_sites]):
         raise HTTPException(
             status_code=400,
-            detail="At least one of: keywords or include_sites is required."
+            detail="At least one of: keywords or include_sites is required.",
         )
 
 
@@ -79,10 +92,11 @@ def resolve_label(request: DorkRequest) -> str:
 
 # routes
 
-# short search 
+
+# short search
 @app.post("/search")
 def search(request: DorkRequest):
-    #validates
+    # validates
     validate_request(request)
     # run dork through dork engine
     result = run_dork(
@@ -95,7 +109,9 @@ def search(request: DorkRequest):
     )
     # check
     if not result["success"]:
-        raise HTTPException(status_code=500, detail=result.get("error", "SerpApi call failed"))
+        raise HTTPException(
+            status_code=500, detail=result.get("error", "SerpApi call failed")
+        )
     return result
 
 
@@ -124,26 +140,38 @@ def monitor(request: DorkRequest):
         num_results=request.num_results,
     )
     if not result["success"]:
-        raise HTTPException(status_code=500, detail=result.get("error", "SerpApi call failed")) # all checks in API
+        raise HTTPException(
+            status_code=500, detail=result.get("error", "SerpApi call failed")
+        )  # all checks in API
     saved = save_results(watchlist_id, result["results"])
-    return {"watchlist_id": watchlist_id, "query": result["query"], "results": result["results"], "db": saved}
+    return {
+        "watchlist_id": watchlist_id,
+        "query": result["query"],
+        "results": result["results"],
+        "db": saved,
+    }
 
-# checks alerts with will 
+
+# checks alerts with will
 @app.get("/alerts")
 def alerts():
     return get_alerts()
+
 
 # will i am
 @app.patch("/alerts/{alert_id}/read")
 def read(alert_id: int):
     updated = mark_as_read(alert_id)
-    if not updated: raise HTTPException(status_code=404, detail="Alert not found")
+    if not updated:
+        raise HTTPException(status_code=404, detail="Alert not found")
     return {"id": alert_id, "is_read": True}
+
 
 # uses the get watchlists from db
 @app.get("/watchlists")
 def get_watchlists():
     return get_all_watchlists()
+
 
 # creates a watchlist
 @app.post("/watchlist")
@@ -161,19 +189,27 @@ def create_watchlist(request: DorkRequest):
     return {"watchlist_id": watchlist_id, "label": label, "category": request.category}
 
 
-#run all watchlists mainly for testing purposes
+# run all watchlists mainly for testing purposes
 @app.post("/run-now")
 def run_now():
     run_all_watchlists()
     return {"status": "done"}
 
+
 # serve frontend (this came from claude)
 frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
-app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+app.mount(
+    "/assets",
+    StaticFiles(directory=os.path.join(frontend_dist, "assets")),
+    name="assets",
+)
+
+
 # in conjuction with above
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str):
     return FileResponse(os.path.join(frontend_dist, "index.html"))
+
 
 # if you want to edit the watchlist (hence the put request)
 @app.put("/watchlist/{watchlist_id}")
@@ -190,10 +226,12 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
     )
     return {"watchlist_id": watchlist_id, "label": label, "category": request.category}
 
+
 # decleration of username and password
 class AuthRequest(BaseModel):
     email: str
     password: str
+
 
 # create user, hashes password
 @app.post("/auth/register")
@@ -206,6 +244,7 @@ def register(request: AuthRequest):
     create_user(request.email, hashed)
     return {"message": "Account created"}
 
+
 # login, checks username and password
 @app.post("/auth/login")
 def login(request: AuthRequest):
@@ -216,11 +255,9 @@ def login(request: AuthRequest):
     return {"token": token, "email": user["email"]}
 
 
-
-
 @app.delete("/watchlist/{watchlist_id}")
-def delete_watchlist(watchlist_id:int):
+def delete_watchlist(watchlist_id: int):
     deleted = delete_watchlist_db(watchlist_id)
-    if not deleted: raise HTTPException(status_code=404, detail="Watchlist not found")
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
     return {"deleted": watchlist_id}
-

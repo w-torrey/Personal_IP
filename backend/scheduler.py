@@ -19,7 +19,6 @@ def run_all_watchlists():
     if not watchlists:
         logger.info("No watchlists found.")
         return
-    
 
     for w in watchlists:
         logger.info(f"running dork for: {w['label']}")
@@ -35,11 +34,14 @@ def run_all_watchlists():
         if result["success"]:
             saved = save_results(w["id"], result["results"])
             # ai terminal checker
-            logger.info(f"Saved: {saved['saved']} new, Skipped: {saved['skipped']} duplicates")
+            logger.info(
+                f"Saved: {saved['saved']} new, Skipped: {saved['skipped']} duplicates"
+            )
         else:
             # failed catch
             logger.error(f"Dork failed for {w['label']}: {result.get('error')}")
     logger.info("Scheduler run complete.")
+
 
 # create a cron job that calls run all watchlists ^^ at 8 PM
 def start_scheduler(interval_hours: int = 24):
@@ -47,6 +49,7 @@ def start_scheduler(interval_hours: int = 24):
     scheduler.add_job(run_all_watchlists, "cron", hour=20, minute=0, id="dork_job")
     scheduler.start()
     logger.info("Scheduler started — running daily at 8:00 PM ET")
+
 
 # stop background thread
 def stop_scheduler():

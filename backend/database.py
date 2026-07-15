@@ -10,7 +10,7 @@ engine = create_engine(DB_URL)
 
 
 # Loops through results param and inserts info into results table, dedup logic within SQL query by URL
-#note the saved counter overcounts because it includes skipped inserts, for future consideration
+# note the saved counter overcounts because it includes skipped inserts, for future consideration
 def save_results(watchlist_id: int, results: list):
     saved = 0
     skipped = 0
@@ -84,7 +84,7 @@ def get_or_create_watchlist(
 
 
 # Overwites existing watchlist with new params, converts to json and casts to jsonb and updates database
-#note for future, needs to return some info for the endpoint to id a failure
+# note for future, needs to return some info for the endpoint to id a failure
 def db_update_watchlist(
     watchlist_id: int,
     label: str,
@@ -150,7 +150,7 @@ def get_alerts():
     ]
 
 
-#Query to retrieve all watchlists with relavant info for /watchlists endpoint, also used in scheduler 
+# Query to retrieve all watchlists with relavant info for /watchlists endpoint, also used in scheduler
 def get_all_watchlists():
     with engine.connect() as conn:
         result = conn.execute(text("""
