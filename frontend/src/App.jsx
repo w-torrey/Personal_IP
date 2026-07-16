@@ -59,6 +59,8 @@ function buildQueryPreview(qp) {
   if (!qp) return "";
   const parts = [];
   (qp.keywords || []).forEach(k => parts.push(`"${k}"`));
+  const or_kw = qp.or_keywords || [];
+  if (or_kw.length) parts.push(`(${or_kw.map(k => `"${k}"`).join(" OR ")})`);
   const inc = qp.include_sites || [];
   if (inc.length) parts.push(`(${inc.map(s => `site:${s}`).join(" OR ")})`);
   (qp.exclude_sites || []).forEach(s => parts.push(`-site:${s}`));
@@ -180,6 +182,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   const qp = watchlist?.query_params || {};
   const [label, setLabel] = useState(watchlist?.label || "");
   const [keywords, setKeywords] = useState(qp.keywords || []);
+  const [orKeywords, setOrKeywords] = useState(qp.or_keywords || []);
   const [excludeKeywords, setExcludeKeywords] = useState(qp.exclude_keywords || []);
   const [includeSites, setIncludeSites] = useState(qp.include_sites || []);
   const [excludeSites, setExcludeSites] = useState(qp.exclude_sites || []);
@@ -192,11 +195,12 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
   useEffect(() => {
     const parts = [];
     keywords.forEach(k => parts.push(`"${k}"`));
+    if (orKeywords.length) parts.push(`(${orKeywords.map(k => `"${k}"`).join(" OR ")})`);
     excludeKeywords.forEach(k => parts.push(`-"${k}"`));
     if (includeSites.length) parts.push(`(${includeSites.map(s => `site:${s}`).join(" OR ")})`);
     excludeSites.forEach(s => parts.push(`-site:${s}`));
     setPreview(parts.join(" ") || "");
-  }, [keywords, excludeKeywords, includeSites, excludeSites]);
+  }, [keywords, orKeywords, excludeKeywords, includeSites, excludeSites]);
 
   async function handleSubmit() {
     if (keywords.length === 0 && includeSites.length === 0) {
@@ -208,6 +212,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
     const body = {
       label: label.trim() || undefined,
       keywords: keywords.length ? keywords : undefined,
+      or_keywords: orKeywords.length ? orKeywords : undefined,
       exclude_keywords: excludeKeywords.length ? excludeKeywords : undefined,
       include_sites: includeSites.length ? includeSites : undefined,
       exclude_sites: excludeSites.length ? excludeSites : undefined,
@@ -240,6 +245,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
             <p style={{ margin: "0 0 12px", fontSize: 11, color: "#555", letterSpacing: "0.04em" }}>QUERY PARAMETERS</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <TagInput label="Keywords" placeholder="e.g. ransomware, data breach" values={keywords} onChange={setKeywords} />
+              <TagInput label='OR keywords — any of these must appear  e.g. "lawsuit" OR "address"' placeholder="e.g. lawsuit, fraud, indictment" values={orKeywords} onChange={setOrKeywords} />
               <TagInput label="Exclude keywords" placeholder="e.g. press release, sponsored" values={excludeKeywords} onChange={setExcludeKeywords} />
               <TagInput label="Include sites" placeholder="e.g. sec.gov, reuters.com" values={includeSites} onChange={setIncludeSites} />
               <TagInput label="Exclude sites" placeholder="e.g. instagram.com, linkedin.com" values={excludeSites} onChange={setExcludeSites} />

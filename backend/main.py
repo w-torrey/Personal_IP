@@ -60,6 +60,7 @@ class DorkRequest(BaseModel):
     # all are optional for now
     label: Optional[str] = None
     keywords: Optional[list[str]] = None
+    or_keywords: Optional[list[str]] = None
     exclude_keywords: Optional[list[str]] = None
     include_sites: Optional[list[str]] = None
     exclude_sites: Optional[list[str]] = None
@@ -101,6 +102,7 @@ def search(request: DorkRequest):
     # run dork through dork engine
     result = run_dork(
         keywords=request.keywords,
+        or_keywords=request.or_keywords,
         exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
@@ -125,6 +127,7 @@ def monitor(request: DorkRequest):
     watchlist_id = get_or_create_watchlist(
         label=label,
         keywords=request.keywords,
+        or_keywords=request.or_keywords,
         exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
@@ -133,6 +136,7 @@ def monitor(request: DorkRequest):
     # once created then run dork
     result = run_dork(
         keywords=request.keywords,
+        or_keywords=request.or_keywords,
         exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
@@ -181,6 +185,7 @@ def create_watchlist(request: DorkRequest):
     watchlist_id = get_or_create_watchlist(
         label=label,
         keywords=request.keywords,
+        or_keywords=request.or_keywords,
         exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
@@ -219,6 +224,7 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
         watchlist_id=watchlist_id,
         label=label,
         keywords=request.keywords,
+        or_keywords=request.or_keywords,
         exclude_keywords=request.exclude_keywords,
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,

@@ -44,6 +44,7 @@ def save_results(watchlist_id: int, results: list):
 def get_or_create_watchlist(
     label: str,
     keywords: list = None,
+    or_keywords: list = None,
     exclude_keywords: list = None,
     include_sites: list = None,
     exclude_sites: list = None,
@@ -52,6 +53,7 @@ def get_or_create_watchlist(
     query_params = json.dumps(
         {
             "keywords": keywords,
+            "or_keywords": or_keywords,
             "exclude_keywords": exclude_keywords,
             "include_sites": include_sites,
             "exclude_sites": exclude_sites,
@@ -89,6 +91,7 @@ def db_update_watchlist(
     watchlist_id: int,
     label: str,
     keywords: list = None,
+    or_keywords: list = None,
     exclude_keywords: list = None,
     include_sites: list = None,
     exclude_sites: list = None,
@@ -97,6 +100,7 @@ def db_update_watchlist(
     query_params = json.dumps(
         {
             "keywords": keywords,
+            "or_keywords": or_keywords,
             "exclude_keywords": exclude_keywords,
             "include_sites": include_sites,
             "exclude_sites": exclude_sites,
