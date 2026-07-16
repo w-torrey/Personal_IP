@@ -8,7 +8,7 @@ load_dotenv() # able to read .env
 def build_query(
         # this function basically creates phrases that are all wrapped in quotes to send to query
     keywords: list = None,
-    andor_keywords: list =None,
+    or_keywords: list =None,
     # testing out excluding the keywords (-"word")
     exclude_keywords: list =None,
     include_sites: list = None,
@@ -29,6 +29,12 @@ def build_query(
         for kw in exclude_keywords:
             parts.append(f'-"{kw}"')
             # wrap in quoutes but insert "-" to allow it to be excluded
+
+    # or keywords
+    if or_keywords:
+        or_clause = " OR ".join(f'"{kw}"' for kw in or_keywords)
+        parts.append(f"({or_clause})")
+
     if include_sites:
         site_clause = " OR ".join(f"site:{s}" for s in include_sites)
         parts.append(f"({site_clause})")
@@ -38,9 +44,6 @@ def build_query(
             parts.append(f"-site:{s}")
             # keyword of those sites just to be excluded
     
-    if andor_keywords:
-        for kw in andor_keywords:
-            parts.append(f'"{kw}"')
 
     return " ".join(parts) # join everythign into spaces
 
@@ -48,7 +51,7 @@ def build_query(
 def run_dork(
         # build it up
     keywords: list = None,
-    andor_keywords: list = None,
+    or_keywords: list = None,
     exclude_keywords: list = None,
     include_sites: list = None,
     exclude_sites: list = None,
@@ -58,7 +61,7 @@ def run_dork(
     # use function above
     query = build_query(
         keywords=keywords,
-        andor_keywords=andor_keywords,
+        or_keywords=or_keywords,
         exclude_keywords=exclude_keywords,
         include_sites=include_sites,
         exclude_sites=exclude_sites,
