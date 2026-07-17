@@ -16,6 +16,8 @@ from database import (
     create_user,
     get_user_by_email,
     mark_as_read,
+    get_digests,
+    get_dossiers,
 )
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import auth
@@ -209,6 +211,13 @@ app.mount(
     name="assets",
 )
 
+@app.get("/digests")
+def digests():
+    return get_digests()
+
+@app.get("/dossiers")
+def dossiers():
+    return get_dossiers()
 
 # in conjuction with above
 @app.get("/{full_path:path}")
