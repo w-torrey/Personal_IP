@@ -42,21 +42,31 @@ def format_alerts(alerts:list[dict]):
     )
         formatted.append(strip)
     return "\n\n".join(formatted)
-    
 
+def build_schema(alerts:list[dict]):
+    ids = [alert["id"] for alert in alerts]
+    return {
+        "type": "object",
+        "properties": {
+            "headline": {"type": "string"},
+            "narrative": {"type": "string"},
+            "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+            "alert_ids": {"type": "array", "items": {"type": "integer", "enum": ids}},
+        },
+        "required": ["headline", "narrative", "severity", "alert_ids"],
+        "additionalProperties": False,
+    }
     
-    
-
-
-        
-def generate(kind: str, alerts:list[dict]):
+def generate_summary(kind: str, alerts:list[dict]):
 
     if kind == "digest":
         sys = digest_system_prompt
         tok = 1000
+        config = {"format": {"type": "json_schema", "schema": build_schema(alerts)}}
     elif kind == "dossier": 
         sys = dossier_system_prompt
         tok = 10000
+        config = None
     else: 
         raise ValueError("generation type not defined")
     
@@ -67,11 +77,14 @@ def generate(kind: str, alerts:list[dict]):
             model="claude-opus-4-8",
             max_tokens=tok,
             system=sys,
-            messages=[{"role": "user", "content": formatted}]
+            messages=[{"role": "user", "content": formatted}],
+            output_config=config
         )
-        return {"success": True, "results": prompt.content[0].text} 
+        text = prompt.content[0].text
+        return_result = json.loads(text) if kind == "digest" else text
+        return {"success": True, "results": return_result} 
     except APIError as error:
         return {"success": False, "error": str(error)}
 
 
- 
+
