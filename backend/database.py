@@ -292,14 +292,14 @@ def get_dossiers():
     with engine.connect() as conn:
         result = conn.execute(
             text("""
-            SELECT d.watchlist_id, d.summary, d.updated_at, w.label
+            SELECT d.watchlist_id, d.summary, d.updated_at, w.label, w.category
             FROM dossiers d 
             JOIN watchlists w ON w.id = d.watchlist_id
                                    """),
         )
         rows = result.fetchall()
         return [
-            {"watchlist_id": row[0], "summary": row[1], "updated_at": row[2], "label": row[3]}
+            {"watchlist_id": row[0], "summary": row[1], "updated_at": row[2], "label": row[3], "category": row[4]}
             for row in rows
         ]
 
@@ -330,6 +330,23 @@ def save_digest(
         )
         conn.commit()
         return result.rowcount
+
+def get_digests():
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("""
+            SELECT DISTINCT ON (d.watchlist_id)
+            d.watchlist_id, d.narrative, d.alert_ids, w.label, d.headline, d.severity, d.generated_at, w.category
+            FROM digests d 
+            JOIN watchlists w ON w.id = d.watchlist_id
+            ORDER BY d.watchlist_id, d.generated_at DESC
+                                   """),
+        )
+        rows = result.fetchall()
+        return [
+            {"watchlist_id": row[0], "narrative": row[1], "alert_ids": row[2], "label": row[3], "headline": row[4], "severity": row[5], "generated_at": row[6], "category": row[7]}
+            for row in rows
+        ]
 
 
 def clear_new_flags(alert_ids: list[int]):
