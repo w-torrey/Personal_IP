@@ -392,7 +392,7 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
 // Header shows the category name, alert count badge, and an "edit" button
 // that opens ManageWatchlistsModal for that category.
 // Body scrolls independently and renders an AlertCard for each alert.
-function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpenAlerts }) {
+function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpenAlerts, onOpenSummaries }) {
   const accent = CATEGORY_COLORS[category];
   const bg = CATEGORY_BG[category];
   const [showManage, setShowManage] = useState(false);
@@ -402,12 +402,12 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpe
       {showManage && (
         <ManageWatchlistsModal category={category} watchlists={watchlists} onClose={() => setShowManage(false)} onSaved={() => { setShowManage(false); onWatchlistSaved(); }} />
       )}
-      {/* Sticky column header — stays visible while the card list scrolls */}
-      <div style={{ padding: "14px 18px", borderBottom: "0.5px solid #1e1e2e", background: bg, display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 1 }}>
+      {/* Sticky column header — click anywhere on the bar to open this category's summaries */}
+      <div onClick={() => onOpenSummaries(category)} style={{ padding: "14px 18px", borderBottom: "0.5px solid #1e1e2e", background: bg, display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 1, cursor: "pointer" }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: accent, flexShrink: 0, boxShadow: `0 0 6px ${accent}88` }} />
         <span style={{ fontSize: "13px", fontWeight: 600, color: "#e8e6ff", letterSpacing: "0.03em" }}>{category}</span>
         <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: 600, color: accent, background: `${accent}22`, padding: "2px 8px", borderRadius: 20 }}>{alerts.length}</span>
-        <button onClick={() => setShowManage(true)} title="Manage watchlists" style={{ background: "transparent", border: "none", cursor: "pointer", color: "#555", padding: "2px 4px", fontSize: 13, lineHeight: 1, borderRadius: 4 }}
+        <button onClick={(e) => { e.stopPropagation(); setShowManage(true); }} title="Manage watchlists" style={{ background: "transparent", border: "none", cursor: "pointer", color: "#555", padding: "2px 4px", fontSize: 13, lineHeight: 1, borderRadius: 4 }}
           onMouseEnter={e => e.target.style.color = accent}
           onMouseLeave={e => e.target.style.color = "#555"}>
           edit
@@ -555,6 +555,74 @@ function AlertPanel({ alert, onClose }) {
 }
 
 
+// ─── Component: SummaryPanel ──────────────────────────────────────────────────
+// Right-side slide-out (mirrors AlertPanel) opened by clicking a category header.
+// Shows every watchlist in that category with its daily digest + running dossier.
+function SummaryPanel({ category, digests, dossiers, onClose }) {
+  const accent = CATEGORY_COLORS[category] || CATEGORY_COLORS["Custom"];
+
+  // Narrow both artifact lists to the clicked category.
+  const catDigests = digests.filter(d => (d.category || "Custom") === category);
+  const catDossiers = dossiers.filter(d => (d.category || "Custom") === category);
+
+  // Collect every watchlist that has either a digest or a dossier in this category,
+  // so a watchlist shows up if it has been summarized at all.
+  const byId = {};
+  for (const d of catDigests) byId[d.watchlist_id] = { label: d.label, digest: d, dossier: null };
+  for (const d of catDossiers) {
+    byId[d.watchlist_id] = { ...(byId[d.watchlist_id] || { label: d.label }), dossier: d };
+  }
+  const watchlistSummaries = Object.values(byId);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "flex-end", zIndex: 400 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 460, maxWidth: "90vw", height: "100vh", background: "#13131c", borderLeft: "0.5px solid #2a2a38", padding: "24px 28px", overflowY: "auto" }}>
+        {/* Header: category badge + close */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: accent, background: `${accent}22`, padding: "3px 10px", borderRadius: 20 }}>{category}</span>
+          <span style={{ fontSize: 11, color: "#555" }}>Summaries</span>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#666", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
+        </div>
+
+        {watchlistSummaries.length === 0 ? (
+          <p style={{ color: "#444", fontSize: 13, textAlign: "center", paddingTop: 32 }}>No summaries yet for this category.</p>
+        ) : (
+          watchlistSummaries.map(({ label, digest, dossier }, i) => (
+            <div key={i} style={{ marginBottom: 28 }}>
+              {/* Watchlist label */}
+              <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600, color: "#e8e6ff" }}>{label || "Unnamed Watchlist"}</p>
+
+              {/* Daily digest */}
+              {digest && (
+                <div style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#888", background: "#2a2a38", padding: "2px 8px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>{digest.severity}</span>
+                    <span style={{ fontSize: 10, color: "#555" }}>{timeAgo(digest.generated_at)}</span>
+                  </div>
+                  <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "#e8e6ff", lineHeight: 1.4 }}>{digest.headline}</p>
+                  <p style={{ margin: 0, fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>{digest.narrative}</p>
+                </div>
+              )}
+
+              {/* Running dossier */}
+              {dossier && (
+                <div style={{ borderTop: "0.5px solid #1e1e2e", paddingTop: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, color: "#555", letterSpacing: "0.06em" }}>DOSSIER</span>
+                    <span style={{ fontSize: 10, color: "#555" }}>updated {timeAgo(dossier.updated_at)}</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12, color: "#999", lineHeight: 1.6 }}>{dossier.summary}</p>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ─── Component: App (root) ────────────────────────────────────────────────────
 // Top-level component. Manages global state and orchestrates the whole dashboard.
 //
@@ -576,6 +644,9 @@ export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [selectedAlert, setSelectedAlerts] = useState(null);
   const [watchlists, setWatchlists] = useState([]);
+  const [digests, setDigests] = useState([]);
+  const [dossiers, setDossiers] = useState([]);
+  const [openCategory, setOpenCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -597,12 +668,16 @@ export default function App() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [alertsRes, watchlistsRes] = await Promise.all([
+      const [alertsRes, watchlistsRes, digestsRes, dossiersRes] = await Promise.all([
         fetch(`${API_BASE}/alerts`),
         fetch(`${API_BASE}/watchlists`),
+        fetch(`${API_BASE}/digests`),
+        fetch(`${API_BASE}/dossiers`),
       ]);
       setAlerts(await alertsRes.json());
       setWatchlists(await watchlistsRes.json());
+      setDigests(await digestsRes.json());
+      setDossiers(await dossiersRes.json());
       setLastRefresh(new Date());
     } catch (e) {
       console.error("Failed to fetch data", e);
@@ -651,6 +726,7 @@ export default function App() {
       {showAddModal && <WatchlistFormModal onClose={() => setShowAddModal(false)} onSaved={fetchData} />}
       {showRunConfirm && <ConfirmRunModal onConfirm={runNow} onClose={() => setShowRunConfirm(false)} />}
       {selectedAlert && <AlertPanel alert={selectedAlert} onClose={() => setSelectedAlerts(null)} />}
+      {openCategory && <SummaryPanel category={openCategory} digests={digests} dossiers={dossiers} onClose={() => setOpenCategory(null)} />}
 
       {/* ── Sticky top nav bar ── */}
       <div style={{ padding: "16px 28px", borderBottom: "0.5px solid #1a1a28", display: "flex", alignItems: "center", gap: 16, background: "#0a0a12", position: "sticky", top: 0, zIndex: 10 }}>
@@ -690,6 +766,7 @@ export default function App() {
             loading={loading}
             onWatchlistSaved={fetchData}
             onOpenAlerts={openAlert}
+            onOpenSummaries={setOpenCategory}
           />
         ))}
       </div>
