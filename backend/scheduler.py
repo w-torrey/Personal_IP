@@ -1,5 +1,13 @@
 from apscheduler.schedulers.background import BackgroundScheduler
-from database import save_results, get_all_watchlists, get_watchlist_alerts, save_digest, save_dossier, get_new_alerts, clear_new_flags
+from database import (
+    save_results,
+    get_all_watchlists,
+    get_watchlist_alerts,
+    save_digest,
+    save_dossier,
+    get_new_alerts,
+    clear_new_flags,
+)
 from dork_engine import run_dork
 from summary_engine import generate_summary
 import logging
@@ -40,17 +48,25 @@ def run_all_watchlists():
                 f"Saved: {saved['saved']} new, Skipped: {saved['skipped']} duplicates"
             )
             new_alerts = get_new_alerts(w["id"])
-            if not new_alerts: 
+            if not new_alerts:
                 continue
             digest = generate_summary("digest", new_alerts)
-            if not digest["success"]: continue
+            if not digest["success"]:
+                continue
             digests = digest["results"]
-            save_digest(w["id"], digests["headline"], digests["narrative"], digests["severity"], digests["alert_ids"])
+            save_digest(
+                w["id"],
+                digests["headline"],
+                digests["narrative"],
+                digests["severity"],
+                digests["alert_ids"],
+            )
             clear_new_flags([alert["id"] for alert in new_alerts])
 
             all_alerts = get_watchlist_alerts(w["id"])
             dossier = generate_summary("dossier", all_alerts)
-            if not dossier["success"]: continue
+            if not dossier["success"]:
+                continue
             save_dossier(w["id"], dossier["results"])
         else:
             # failed catch
