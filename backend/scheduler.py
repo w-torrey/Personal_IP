@@ -47,27 +47,32 @@ def run_all_watchlists():
             logger.info(
                 f"Saved: {saved['saved']} new, Skipped: {saved['skipped']} duplicates"
             )
-            new_alerts = get_new_alerts(w["id"])
-            if not new_alerts:
-                continue
-            digest = generate_summary("digest", new_alerts)
-            if not digest["success"]:
-                continue
-            digests = digest["results"]
-            save_digest(
-                w["id"],
-                digests["headline"],
-                digests["narrative"],
-                digests["severity"],
-                digests["alert_ids"],
-            )
-            clear_new_flags([alert["id"] for alert in new_alerts])
+            try:
+                new_alerts = get_new_alerts(w["id"])
+                if not new_alerts:
+                    continue
+                digest = generate_summary("digest", new_alerts)
+                if not digest["success"]:
+                        logger.error(f"Digest failed to generate for {w['label']}: {digest['error']}")
+                        continue
+                digests = digest["results"]
+                save_digest(
+                    w["id"],
+                    digests["headline"],
+                    digests["narrative"],
+                    digests["severity"],
+                    digests["alert_ids"],
+                )
+                clear_new_flags([alert["id"] for alert in new_alerts])
 
-            all_alerts = get_watchlist_alerts(w["id"])
-            dossier = generate_summary("dossier", all_alerts)
-            if not dossier["success"]:
-                continue
-            save_dossier(w["id"], dossier["results"])
+                all_alerts = get_watchlist_alerts(w["id"])
+                dossier = generate_summary("dossier", all_alerts)
+                if not dossier["success"]:
+                    logger.error(f"Dossier failed to generate for {w['label']}: {dossier['error']}")
+                    continue
+                save_dossier(w["id"], dossier["results"])
+            except Exception as e:
+                logger.error(f"Summary generation failed for {w['label']}: {e}")
         else:
             # failed catch
             logger.error(f"Dork failed for {w['label']}: {result.get('error')}")

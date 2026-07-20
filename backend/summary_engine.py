@@ -1,4 +1,3 @@
-import os
 import json
 from dotenv import load_dotenv
 from anthropic import Anthropic, APIError
@@ -75,14 +74,16 @@ def generate_summary(kind: str, alerts: list[dict]):
 
     formatted = format_alerts(alerts)
 
+    kwargs = {
+    "model": "claude-opus-4-8",
+    "max_tokens": tok,
+    "system": sys,
+    "messages": [{"role": "user", "content": formatted}],
+    }
+    if config is not None:
+        kwargs["output_config"] = config
     try:
-        prompt = client.messages.create(
-            model="claude-opus-4-8",
-            max_tokens=tok,
-            system=sys,
-            messages=[{"role": "user", "content": formatted}],
-            output_config=config,
-        )
+        prompt = client.messages.create(**kwargs)
         text = prompt.content[0].text
         return_result = json.loads(text) if kind == "digest" else text
         return {"success": True, "results": return_result}
