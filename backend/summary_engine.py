@@ -15,8 +15,9 @@ results.
 
 Ground every statement in the provided results and do not speculate beyond
 them. Where results conflict or are uncertain, note the uncertainty rather
-than resolving it. Organize by significance, not chronology. This is a
-reference document, so favor completeness and clarity over brevity.
+than resolving it. Organize by significance, not chronology. Keep the dossier
+roughly 500 words. Prioritize the most significant findings over exhaustive coverage,
+ omit sections that would be empty or speculative rather than noting their absence.
  """
 digest_system_prompt = """
 You are an OSINT analyst writing a daily briefing for a monitored target.
@@ -75,10 +76,10 @@ def generate_summary(kind: str, alerts: list[dict]):
     formatted = format_alerts(alerts)
 
     kwargs = {
-    "model": "claude-opus-4-8",
-    "max_tokens": tok,
-    "system": sys,
-    "messages": [{"role": "user", "content": formatted}],
+        "model": "claude-opus-4-8",
+        "max_tokens": tok,
+        "system": sys,
+        "messages": [{"role": "user", "content": formatted}],
     }
     if config is not None:
         kwargs["output_config"] = config
