@@ -16,7 +16,7 @@ def save_results(watchlist_id: int, results: list):
     with engine.connect() as conn:
         for item in results:
             try:
-                conn.execute(
+                result = conn.execute(
                     text("""
                     INSERT INTO results (watchlist_id, title, link, snippet, source, date_found)
                     VALUES (:watchlist_id, :title, :link, :snippet, :source, :date_found)
@@ -31,7 +31,9 @@ def save_results(watchlist_id: int, results: list):
                         "date_found": item.get("date"),
                     },
                 )
-                saved += 1
+                if result.rowcount:
+                    saved += 1
+                else: skipped += 1
             except Exception as e:
                 skipped += 1
                 print(f"Skipped: {e}")
