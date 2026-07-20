@@ -9,7 +9,6 @@ DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres@localhost:5432/IndexPu
 engine = create_engine(DB_URL)
 
 # Loops through results param and inserts info into results table, dedup logic within SQL query by URL
-# note the saved counter overcounts because it includes skipped inserts, for future consideration
 def save_results(watchlist_id: int, results: list):
     saved = 0
     skipped = 0
@@ -108,7 +107,7 @@ def db_update_watchlist(
         }
     )
     with engine.connect() as conn:
-        conn.execute(
+        result = conn.execute(
             text("""
             UPDATE watchlists
             SET label = :label,
@@ -124,6 +123,7 @@ def db_update_watchlist(
             },
         )
         conn.commit()
+        return result.rowcount
 
 
 # Query to get all alerts to feed into /alerts enpoint

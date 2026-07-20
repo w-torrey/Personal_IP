@@ -229,7 +229,7 @@ def serve_frontend(full_path: str):
 @app.put("/watchlist/{watchlist_id}")
 def update_watchlist(watchlist_id: int, request: DorkRequest):
     label = resolve_label(request)
-    db_update_watchlist(
+    updated = db_update_watchlist(
         watchlist_id=watchlist_id,
         label=label,
         keywords=request.keywords,
@@ -239,6 +239,8 @@ def update_watchlist(watchlist_id: int, request: DorkRequest):
         exclude_sites=request.exclude_sites,
         category=request.category,
     )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
     return {"watchlist_id": watchlist_id, "label": label, "category": request.category}
 
 
