@@ -581,10 +581,10 @@ function SummaryPanel({ category, digests, dossiers, onClose }) {
   const watchlistSummaries = Object.values(byId);
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "flex-end", zIndex: 400 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 460, maxWidth: "90vw", height: "100vh", background: "#13131c", borderLeft: "0.5px solid #2a2a38", padding: "24px 28px", overflowY: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "90vw", maxWidth: 1100, maxHeight: "85vh", background: "#13131c", border: "0.5px solid #2a2a38", borderRadius: 16, padding: "24px 28px", display: "flex", flexDirection: "column" }}>
         {/* Header: category badge + close */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexShrink: 0 }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: accent, background: `${accent}22`, padding: "3px 10px", borderRadius: 20 }}>{category}</span>
           <span style={{ fontSize: 11, color: "#555" }}>Summaries</span>
           <button onClick={onClose} style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#666", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
@@ -593,35 +593,41 @@ function SummaryPanel({ category, digests, dossiers, onClose }) {
         {watchlistSummaries.length === 0 ? (
           <p style={{ color: "#444", fontSize: 13, textAlign: "center", paddingTop: 32 }}>No summaries yet for this category.</p>
         ) : (
-          watchlistSummaries.map(({ label, digest, dossier }, i) => (
-            <div key={i} style={{ marginBottom: 28 }}>
-              {/* Watchlist label */}
-              <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600, color: "#e8e6ff" }}>{label || "Unnamed Watchlist"}</p>
+          /* One column per watchlist, laid out horizontally; scrolls sideways if they overflow */
+          <div style={{ display: "flex", gap: 16, overflowX: "auto", flex: 1, minHeight: 0, alignItems: "stretch" }}>
+            {watchlistSummaries.map(({ label, digest, dossier }, i) => (
+              <div key={i} style={{ flex: "0 0 320px", display: "flex", flexDirection: "column", minHeight: 0, background: "#0f0f16", border: "0.5px solid #1e1e2e", borderRadius: 12, padding: "14px 16px" }}>
+                {/* Watchlist label */}
+                <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600, color: "#e8e6ff", flexShrink: 0 }}>{label || "Unnamed Watchlist"}</p>
 
-              {/* Daily digest */}
-              {digest && (
-                <div style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#888", background: "#2a2a38", padding: "2px 8px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>{digest.severity}</span>
-                    <span style={{ fontSize: 10, color: "#555" }}>{timeAgo(digest.generated_at)}</span>
-                  </div>
-                  <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "#e8e6ff", lineHeight: 1.4 }}>{digest.headline}</p>
-                  <p style={{ margin: 0, fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>{digest.narrative}</p>
-                </div>
-              )}
+                {/* Column body scrolls on its own so all columns stay the same height */}
+                <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+                  {/* Daily digest */}
+                  {digest && (
+                    <div style={{ background: "#18181f", border: "0.5px solid #2a2a38", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "#888", background: "#2a2a38", padding: "2px 8px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>{digest.severity}</span>
+                        <span style={{ fontSize: 10, color: "#555" }}>{timeAgo(digest.generated_at)}</span>
+                      </div>
+                      <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "#e8e6ff", lineHeight: 1.4 }}>{digest.headline}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>{digest.narrative}</p>
+                    </div>
+                  )}
 
-              {/* Running dossier */}
-              {dossier && (
-                <div style={{ borderTop: "0.5px solid #1e1e2e", paddingTop: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 10, color: "#555", letterSpacing: "0.06em" }}>DOSSIER</span>
-                    <span style={{ fontSize: 10, color: "#555" }}>updated {timeAgo(dossier.updated_at)}</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 12, color: "#999", lineHeight: 1.6 }}>{dossier.summary}</p>
+                  {/* Running dossier */}
+                  {dossier && (
+                    <div style={{ borderTop: "0.5px solid #1e1e2e", paddingTop: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, color: "#555", letterSpacing: "0.06em" }}>DOSSIER</span>
+                        <span style={{ fontSize: 10, color: "#555" }}>updated {timeAgo(dossier.updated_at)}</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 12, color: "#999", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{dossier.summary}</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
