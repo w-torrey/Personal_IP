@@ -56,7 +56,7 @@ def run_dork(
     include_sites: list = None,
     exclude_sites: list = None,
     hours: int = 24,
-    num_results: int = 10,
+    # num_results: int = 10,  (Commenting this out for now so that we can just ge a lot of output for now... before hand this was just returning 10 results when there could have been 50+ returnable possibly)
 ):
     # use function above
     query = build_query(
@@ -80,7 +80,8 @@ def run_dork(
         "hl": "en", # english
         "gl": "us",
         "tbs": "qdr:d", # set for last 24 hours ( we should see if we can change this to a certain amount of hours and check in with the scheduler )
-        "num": num_results, # num results that can be defined later but is set as 10 as of now 
+        # "num": num_results, # num results that can be defined later but is set as 10 as of now 
+        # commenting out ^^^
         "api_key": os.getenv("SERPAPI_KEY")  # grab api key
     })
 
