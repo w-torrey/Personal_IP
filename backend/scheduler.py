@@ -11,6 +11,7 @@ from database import (
 from dork_engine import run_dork
 from summary_engine import generate_summary
 import logging
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,6 +25,10 @@ scheduler = BackgroundScheduler()
 def run_all_watchlists():
     # return all watchlists so we can work it
     logger.info("Scheduler triggered — running all watchlist")
+    run_start = time.perf_counter()
+    total_saved = 0
+    total_skipped = 0
+    total_tokens = 0
     watchlists = get_all_watchlists()
     if not watchlists:
         logger.info("No watchlists found.")
@@ -47,6 +52,8 @@ def run_all_watchlists():
             logger.info(
                 f"Saved: {saved['saved']} new, Skipped: {saved['skipped']} duplicates"
             )
+            total_saved += saved["saved"]
+            total_skipped += saved["skipped"]
             try:
                 new_alerts = get_new_alerts(w["id"])
                 if not new_alerts:
@@ -56,6 +63,8 @@ def run_all_watchlists():
                         logger.error(f"Digest failed to generate for {w['label']}: {digest['error']}")
                         continue
                 digests = digest["results"]
+                total_tokens += digest.get("input_tokens", 0) + digest.get("output_tokens", 0)
+                logger.info(f"Digest {w['label']}: {digest.get('seconds')}s, {digest.get('input_tokens')}in/{digest.get('output_tokens')}out tok")
                 save_digest(
                     w["id"],
                     digests["headline"],
@@ -71,12 +80,20 @@ def run_all_watchlists():
                     logger.error(f"Dossier failed to generate for {w['label']}: {dossier['error']}")
                     continue
                 save_dossier(w["id"], dossier["results"])
+                total_tokens += dossier.get("input_tokens", 0) + dossier.get("output_tokens", 0)
+                logger.info(f"Dossier {w['label']}: {dossier.get('seconds')}s, {dossier.get('input_tokens')}in/{dossier.get('output_tokens')}out tok")
             except Exception as e:
                 logger.error(f"Summary generation failed for {w['label']}: {e}")
         else:
             # failed catch
             logger.error(f"Dork failed for {w['label']}: {result.get('error')}")
-    logger.info("Scheduler run complete.")
+    elapsed = time.perf_counter() - run_start
+    total = total_saved + total_skipped
+    dedup_pct = round(100 * total_skipped / total, 1) if total else 0
+    logger.info(
+        f"SWEEP DONE in {round(elapsed, 2)}s | {len(watchlists)} watchlists | "
+        f"saved {total_saved}, skipped {total_skipped} ({dedup_pct}% dedup) | {total_tokens} tokens"
+    )
 
 
 # create a cron job that calls run all watchlists ^^ at 8 PM

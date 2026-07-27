@@ -1,6 +1,7 @@
 import json
 from dotenv import load_dotenv
 from anthropic import Anthropic, APIError
+import time
 
 load_dotenv()
 
@@ -84,9 +85,11 @@ def generate_summary(kind: str, alerts: list[dict]):
     if config is not None:
         kwargs["output_config"] = config
     try:
+        t0 = time.perf_counter()
         prompt = client.messages.create(**kwargs)
+        elapsed = time.perf_counter() - t0
         text = prompt.content[0].text
         return_result = json.loads(text) if kind == "digest" else text
-        return {"success": True, "results": return_result}
+        return {"success": True, "results": return_result, "seconds": round(elapsed, 2), "input_tokens": prompt.usage.input_tokens, "output_tokens": prompt.usage.output_tokens}
     except APIError as error:
         return {"success": False, "error": str(error)}
