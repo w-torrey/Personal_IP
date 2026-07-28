@@ -3,6 +3,8 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 ##load_dotenv()
 
@@ -13,6 +15,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -34,3 +37,22 @@ def decode_token(token: str):
         return payload.get("sub")
     except JWTError:
         return None
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> str:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    email = decode_token(credentials.credentials)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid, please log in again",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return email

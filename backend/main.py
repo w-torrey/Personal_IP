@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -98,7 +98,7 @@ def resolve_label(request: DorkRequest) -> str:
 
 # short search
 @app.post("/search")
-def search(request: DorkRequest):
+def search(request: DorkRequest, user: str = Depends(auth.get_current_user)):
     # validates
     validate_request(request)
     # run dork through dork engine
@@ -121,7 +121,7 @@ def search(request: DorkRequest):
 
 # creates or finds a watchlist and runs and saves it
 @app.post("/monitor")
-def monitor(request: DorkRequest):
+def monitor(request: DorkRequest, user: str = Depends(auth.get_current_user)):
     validate_request(request)
     label = resolve_label(request)
     # db create new id if needed
@@ -160,13 +160,13 @@ def monitor(request: DorkRequest):
 
 # checks alerts with will
 @app.get("/alerts")
-def alerts():
+def alerts(user: str = Depends(auth.get_current_user)):
     return get_alerts()
 
 
 # will i am
 @app.patch("/alerts/{alert_id}/read")
-def read(alert_id: int):
+def read(alert_id: int, user: str = Depends(auth.get_current_user)):
     updated = mark_as_read(alert_id)
     if not updated:
         raise HTTPException(status_code=404, detail="Alert not found")
@@ -175,13 +175,13 @@ def read(alert_id: int):
 
 # uses the get watchlists from db
 @app.get("/watchlists")
-def get_watchlists():
+def get_watchlists(user: str = Depends(auth.get_current_user)):
     return get_all_watchlists()
 
 
 # creates a watchlist
 @app.post("/watchlist")
-def create_watchlist(request: DorkRequest):
+def create_watchlist(request: DorkRequest, user: str = Depends(auth.get_current_user)):
     validate_request(request)
     label = resolve_label(request)
     watchlist_id = get_or_create_watchlist(
@@ -198,7 +198,7 @@ def create_watchlist(request: DorkRequest):
 
 # run all watchlists mainly for testing purposes
 @app.post("/run-now")
-def run_now():
+def run_now(user: str = Depends(auth.get_current_user)):
     run_all_watchlists()
     return {"status": "done"}
 
@@ -212,11 +212,11 @@ app.mount(
 )
 
 @app.get("/digests")
-def digests():
+def digests(user: str = Depends(auth.get_current_user)):
     return get_digests()
 
 @app.get("/dossiers")
-def dossiers():
+def dossiers(user: str = Depends(auth.get_current_user)):
     return get_dossiers()
 
 # in conjuction with above
@@ -227,7 +227,7 @@ def serve_frontend(full_path: str):
 
 # if you want to edit the watchlist (hence the put request)
 @app.put("/watchlist/{watchlist_id}")
-def update_watchlist(watchlist_id: int, request: DorkRequest):
+def update_watchlist(watchlist_id: int, request: DorkRequest, user: str = Depends(auth.get_current_user)):
     label = resolve_label(request)
     updated = db_update_watchlist(
         watchlist_id=watchlist_id,
@@ -273,7 +273,7 @@ def login(request: AuthRequest):
 
 
 @app.delete("/watchlist/{watchlist_id}")
-def delete_watchlist(watchlist_id: int):
+def delete_watchlist(watchlist_id: int, user: str = Depends(auth.get_current_user)):
     deleted = delete_watchlist_db(watchlist_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Watchlist not found")

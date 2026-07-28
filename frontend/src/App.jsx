@@ -6,6 +6,32 @@ const version = "1.0.1"
 // Backend URL — all fetch calls point here
 const API_BASE = "http://100.65.81.57:8000";
 
+function getTokenExpiryMs(token) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.exp ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+async function authFetch(url, options = {}) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (res.status === 401) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userEmail");
+    window.dispatchEvent(new Event("auth:expired"));
+  }
+  return res;
+}
+
 // The four fixed alert categories shown as columns on the dashboard
 const CATEGORIES = ["Exec Watch", "Fraud", "Threat Intelligence", "Custom"];
 
@@ -221,7 +247,7 @@ function WatchlistFormModal({ watchlist, onClose, onSaved }) {
     try {
       const url = isEdit ? `${API_BASE}/watchlist/${watchlist.id}` : `${API_BASE}/watchlist`;
       const method = isEdit ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const res = await authFetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Failed"); }
       onSaved();
       onClose();
@@ -315,7 +341,7 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
   async function handleDelete(id) {
     setDeletingId(id);
     try {
-      const res = await fetch(`${API_BASE}/watchlist/${id}`, {method: "DELETE"});
+      const res = await authFetch(`${API_BASE}/watchlist/${id}`, {method: "DELETE"});
       if (!res.ok) throw new Error("Failed to delete");
       onSaved();
     }
@@ -675,16 +701,37 @@ export default function App() {
     setCurrentUser(null);
   }
 
+  useEffect(() => {
+    function handleExpired() { setCurrentUser(null); }
+    window.addEventListener("auth:expired", handleExpired);
+    return () => window.removeEventListener("auth:expired", handleExpired);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const expiryMs = getTokenExpiryMs(token);
+    if (!expiryMs) return;
+    const msLeft = expiryMs - Date.now();
+    if (msLeft <= 0) {
+      handleLogout();
+      return;
+    }
+    const timer = setTimeout(handleLogout, msLeft);
+    return () => clearTimeout(timer);
+  }, [currentUser]);
+
   // Fetch alerts and watchlists in parallel; wrapped in useCallback so it's
   // stable across renders and can be passed as onSaved/onWatchlistSaved prop
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [alertsRes, watchlistsRes, digestsRes, dossiersRes] = await Promise.all([
-        fetch(`${API_BASE}/alerts`),
-        fetch(`${API_BASE}/watchlists`),
-        fetch(`${API_BASE}/digests`),
-        fetch(`${API_BASE}/dossiers`),
+        authFetch(`${API_BASE}/alerts`),
+        authFetch(`${API_BASE}/watchlists`),
+        authFetch(`${API_BASE}/digests`),
+        authFetch(`${API_BASE}/dossiers`),
       ]);
       setAlerts(await alertsRes.json());
       setWatchlists(await watchlistsRes.json());
@@ -707,7 +754,7 @@ export default function App() {
     setRunningNow(true);
     setStatus("Running all watchlists...");
     try {
-      await fetch(`${API_BASE}/run-now`, { method: "POST" });
+      await authFetch(`${API_BASE}/run-now`, { method: "POST" });
       setStatus("Done. Refreshing...");
       await fetchData();
       setStatus("");
@@ -722,7 +769,7 @@ export default function App() {
   async function openAlert(alert) {
     setSelectedAlerts(alert);
     if (!alert.is_read) {
-      await fetch(`${API_BASE}/alerts/${alert.id}/read`, { method: "PATCH" });
+      await authFetch(`${API_BASE}/alerts/${alert.id}/read`, { method: "PATCH" });
       setAlerts(prev => prev.map(a => a.id === alert.id ? {...a, is_read: true} : a));
     }
   }
