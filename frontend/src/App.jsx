@@ -733,10 +733,10 @@ export default function App() {
         authFetch(`${API_BASE}/digests`),
         authFetch(`${API_BASE}/dossiers`),
       ]);
-      setAlerts(await alertsRes.json());
-      setWatchlists(await watchlistsRes.json());
-      setDigests(await digestsRes.json());
-      setDossiers(await dossiersRes.json());
+      if (alertsRes.ok) setAlerts(await alertsRes.json());
+      if (watchlistsRes.ok) setWatchlists(await watchlistsRes.json());
+      if (digestsRes.ok) setDigests(await digestsRes.json());
+      if (dossiersRes.ok) setDossiers(await dossiersRes.json());
       setLastRefresh(new Date());
     } catch (e) {
       console.error("Failed to fetch data", e);
@@ -745,8 +745,11 @@ export default function App() {
     }
   }, []);
 
-  // Load data on first mount
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Load data once logged in, and again immediately after a fresh login
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchData();
+  }, [currentUser, fetchData]);
 
   // Triggers an immediate run of all watchlists on the server, then refreshes
   async function runNow() {
