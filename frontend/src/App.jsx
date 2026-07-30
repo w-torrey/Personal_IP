@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 // App version shown in the auth screen footer
-const version = "1.0.1"
+const version = "1.0.2"
 
 // Backend URL — all fetch calls point here
 const API_BASE = "http://100.65.81.57:8000";
