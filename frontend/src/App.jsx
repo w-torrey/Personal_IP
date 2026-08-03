@@ -6,6 +6,8 @@ const version = "1.0.2"
 // Backend URL — all fetch calls point here
 const API_BASE = "http://100.65.81.57:8000";
 
+// Decodes a JWT's payload (without verifying signature) to read its exp claim
+// Returns the expiry as epoch milliseconds, or null if the token can't be parsed
 function getTokenExpiryMs(token) {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
@@ -15,6 +17,9 @@ function getTokenExpiryMs(token) {
   }
 }
 
+// Wrapper around fetch that attaches the stored JWT as a Bearer token.
+// On a 401 response, clears the stored session and fires "auth:expired" so
+// the App component can drop back to the login screen.
 async function authFetch(url, options = {}) {
   const token = localStorage.getItem("token");
   const res = await fetch(url, {
@@ -701,12 +706,16 @@ export default function App() {
     setCurrentUser(null);
   }
 
+  // Listens for the "auth:expired" event dispatched by authFetch on a 401,
+  // so any expired/invalid token anywhere in the app drops back to the login screen
   useEffect(() => {
     function handleExpired() { setCurrentUser(null); }
     window.addEventListener("auth:expired", handleExpired);
     return () => window.removeEventListener("auth:expired", handleExpired);
   }, []);
 
+  // Proactively logs the user out once their JWT's exp claim is reached,
+  // rather than waiting for the next authFetch call to hit a 401
   useEffect(() => {
     if (!currentUser) return;
     const token = localStorage.getItem("token");
