@@ -7,6 +7,7 @@ load_dotenv()
 
 client = Anthropic()
 
+# System prompts for respective summary type
 dossier_system_prompt = """
 You are an OSINT analyst maintaining a running dossier on a monitored target.
 You will be given the complete set of search results collected for this target
@@ -33,6 +34,7 @@ Lead with what matters most. Do not restate every result; synthesize.
 """
 
 
+# Formatting alerts into labeled text for clean handover to Anthropic model
 def format_alerts(alerts: list[dict]):
     formatted = []
     for alert in alerts:
@@ -46,6 +48,7 @@ def format_alerts(alerts: list[dict]):
     return "\n\n".join(formatted)
 
 
+# Formatting alerts into a json schema per call, and locks severity to enum and alert ids to themselves
 def build_schema(alerts: list[dict]):
     ids = [alert["id"] for alert in alerts]
     return {
@@ -61,6 +64,7 @@ def build_schema(alerts: list[dict]):
     }
 
 
+# the bulk of this program, determines summary type and then runs Anthropic api query
 def generate_summary(kind: str, alerts: list[dict]):
 
     if kind == "digest":
@@ -89,7 +93,14 @@ def generate_summary(kind: str, alerts: list[dict]):
         prompt = client.messages.create(**kwargs)
         elapsed = time.perf_counter() - t0
         text = prompt.content[0].text
+        # Need that json loads to format the json string into a python dict for handling
         return_result = json.loads(text) if kind == "digest" else text
-        return {"success": True, "results": return_result, "seconds": round(elapsed, 2), "input_tokens": prompt.usage.input_tokens, "output_tokens": prompt.usage.output_tokens}
+        return {
+            "success": True,
+            "results": return_result,
+            "seconds": round(elapsed, 2),
+            "input_tokens": prompt.usage.input_tokens,
+            "output_tokens": prompt.usage.output_tokens,
+        }
     except APIError as error:
         return {"success": False, "error": str(error)}

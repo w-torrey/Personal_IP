@@ -8,6 +8,7 @@ load_dotenv()
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres@localhost:5432/IndexPulse")
 engine = create_engine(DB_URL)
 
+
 # Loops through results param and inserts info into results table, dedup logic within SQL query by URL
 def save_results(watchlist_id: int, results: list):
     saved = 0
@@ -32,7 +33,8 @@ def save_results(watchlist_id: int, results: list):
                 )
                 if result.rowcount:
                     saved += 1
-                else: skipped += 1
+                else:
+                    skipped += 1
             except Exception as e:
                 skipped += 1
                 print(f"Skipped: {e}")
@@ -225,6 +227,7 @@ def mark_as_read(alert_id: int):
         return result.rowcount
 
 
+# Query to retrieve only new results for summary digest
 def get_new_alerts(watchlist_id: int):
     with engine.connect() as conn:
         result = conn.execute(
@@ -251,6 +254,7 @@ def get_new_alerts(watchlist_id: int):
     ]
 
 
+# Query for watchlist specific alerts, used for generating dossier summary
 def get_watchlist_alerts(watchlist_id: int):
     with engine.connect() as conn:
         result = conn.execute(
@@ -277,8 +281,8 @@ def get_watchlist_alerts(watchlist_id: int):
     ]
 
 
-## This is the method to save the dossier we generate into our db,
-## we have an on conflict clause to update when a dossier already exists rather than write and store a whole new one
+# This is the method to save the dossier we generate into our db,
+# we have an on conflict clause to update when a dossier already exists rather than write and store a whole new one
 def save_dossier(watchlist_id: int, summary: str):
     with engine.connect() as conn:
         result = conn.execute(
@@ -294,6 +298,7 @@ def save_dossier(watchlist_id: int, summary: str):
         return result.rowcount
 
 
+# Query to serve dossiers to frontend
 def get_dossiers():
     with engine.connect() as conn:
         result = conn.execute(
@@ -305,11 +310,18 @@ def get_dossiers():
         )
         rows = result.fetchall()
         return [
-            {"watchlist_id": row[0], "summary": row[1], "updated_at": row[2], "label": row[3], "category": row[4]}
+            {
+                "watchlist_id": row[0],
+                "summary": row[1],
+                "updated_at": row[2],
+                "label": row[3],
+                "category": row[4],
+            }
             for row in rows
         ]
 
 
+# Query to save digests to db
 def save_digest(
     watchlist_id: int,
     headline: str,
@@ -337,6 +349,8 @@ def save_digest(
         conn.commit()
         return result.rowcount
 
+
+# Query to serve digests to frontend
 def get_digests():
     with engine.connect() as conn:
         result = conn.execute(
@@ -350,11 +364,21 @@ def get_digests():
         )
         rows = result.fetchall()
         return [
-            {"watchlist_id": row[0], "narrative": row[1], "alert_ids": row[2], "label": row[3], "headline": row[4], "severity": row[5], "generated_at": row[6], "category": row[7]}
+            {
+                "watchlist_id": row[0],
+                "narrative": row[1],
+                "alert_ids": row[2],
+                "label": row[3],
+                "headline": row[4],
+                "severity": row[5],
+                "generated_at": row[6],
+                "category": row[7],
+            }
             for row in rows
         ]
 
 
+# Clear flags query to apply to new results after they have been added to digest
 def clear_new_flags(alert_ids: list[int]):
     with engine.connect() as conn:
         result = conn.execute(

@@ -158,13 +158,13 @@ def monitor(request: DorkRequest, user: str = Depends(auth.get_current_user)):
     }
 
 
-# checks alerts with will
+# checks alerts
 @app.get("/alerts")
 def alerts(user: str = Depends(auth.get_current_user)):
     return get_alerts()
 
 
-# will i am
+# read recipt endpoint
 @app.patch("/alerts/{alert_id}/read")
 def read(alert_id: int, user: str = Depends(auth.get_current_user)):
     updated = mark_as_read(alert_id)
@@ -211,13 +211,18 @@ app.mount(
     name="assets",
 )
 
+
+# serves digests
 @app.get("/digests")
 def digests(user: str = Depends(auth.get_current_user)):
     return get_digests()
 
+
+# serves dossiers
 @app.get("/dossiers")
 def dossiers(user: str = Depends(auth.get_current_user)):
     return get_dossiers()
+
 
 # in conjuction with above
 @app.get("/{full_path:path}")
@@ -227,7 +232,9 @@ def serve_frontend(full_path: str):
 
 # if you want to edit the watchlist (hence the put request)
 @app.put("/watchlist/{watchlist_id}")
-def update_watchlist(watchlist_id: int, request: DorkRequest, user: str = Depends(auth.get_current_user)):
+def update_watchlist(
+    watchlist_id: int, request: DorkRequest, user: str = Depends(auth.get_current_user)
+):
     label = resolve_label(request)
     updated = db_update_watchlist(
         watchlist_id=watchlist_id,
@@ -272,6 +279,7 @@ def login(request: AuthRequest):
     return {"token": token, "email": user["email"]}
 
 
+# Delete wathchlist endpoint
 @app.delete("/watchlist/{watchlist_id}")
 def delete_watchlist(watchlist_id: int, user: str = Depends(auth.get_current_user)):
     deleted = delete_watchlist_db(watchlist_id)

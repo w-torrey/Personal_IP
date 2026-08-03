@@ -60,11 +60,17 @@ def run_all_watchlists():
                     continue
                 digest = generate_summary("digest", new_alerts)
                 if not digest["success"]:
-                        logger.error(f"Digest failed to generate for {w['label']}: {digest['error']}")
-                        continue
+                    logger.error(
+                        f"Digest failed to generate for {w['label']}: {digest['error']}"
+                    )
+                    continue
                 digests = digest["results"]
-                total_tokens += digest.get("input_tokens", 0) + digest.get("output_tokens", 0)
-                logger.info(f"Digest {w['label']}: {digest.get('seconds')}s, {digest.get('input_tokens')}in/{digest.get('output_tokens')}out tok")
+                total_tokens += digest.get("input_tokens", 0) + digest.get(
+                    "output_tokens", 0
+                )
+                logger.info(
+                    f"Digest {w['label']}: {digest.get('seconds')}s, {digest.get('input_tokens')}in/{digest.get('output_tokens')}out tok"
+                )
                 save_digest(
                     w["id"],
                     digests["headline"],
@@ -77,11 +83,17 @@ def run_all_watchlists():
                 all_alerts = get_watchlist_alerts(w["id"])
                 dossier = generate_summary("dossier", all_alerts)
                 if not dossier["success"]:
-                    logger.error(f"Dossier failed to generate for {w['label']}: {dossier['error']}")
+                    logger.error(
+                        f"Dossier failed to generate for {w['label']}: {dossier['error']}"
+                    )
                     continue
                 save_dossier(w["id"], dossier["results"])
-                total_tokens += dossier.get("input_tokens", 0) + dossier.get("output_tokens", 0)
-                logger.info(f"Dossier {w['label']}: {dossier.get('seconds')}s, {dossier.get('input_tokens')}in/{dossier.get('output_tokens')}out tok")
+                total_tokens += dossier.get("input_tokens", 0) + dossier.get(
+                    "output_tokens", 0
+                )
+                logger.info(
+                    f"Dossier {w['label']}: {dossier.get('seconds')}s, {dossier.get('input_tokens')}in/{dossier.get('output_tokens')}out tok"
+                )
             except Exception as e:
                 logger.error(f"Summary generation failed for {w['label']}: {e}")
         else:
