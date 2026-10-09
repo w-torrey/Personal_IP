@@ -118,7 +118,7 @@ A Google Dork is a search query that uses Google's advanced operators to find sp
 | `"quoted phrase"` | Forces an exact match |
 | `-keyword` | Excludes results that contain a keyword |
 
-Queries run through [SerpAPI](https://serpapi.com/).
+Queries run through [SerpAPI](https://serpapi.com/), limited to the last 24 hours. Each one runs as a regular Google web search first, where dork operators like `filetype:` and `inurl:` work. If that finds nothing, it's retried as a Google News search. Google's date filter on web search often misses recent news articles, while News indexes them by publish time.
 
 ## Tech stack
 
