@@ -1,9 +1,12 @@
 from serpapi import GoogleSearch  # serp api client from google search
 import os
 import json
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()  # able to read .env
+
+logger = logging.getLogger(__name__)
 
 
 def build_query(
@@ -48,6 +51,18 @@ def build_query(
     return " ".join(parts)  # join everythign into spaces
 
 
+# Google's time filter: qdr:d is the past day, qdr:w the past week. These are the
+# documented forms; hour counts like qdr:h24 returned nothing through SerpAPI
+def time_filter(hours: int) -> str:
+    if hours <= 1:
+        return "qdr:h"
+    if hours <= 24:
+        return "qdr:d"
+    if hours <= 24 * 7:
+        return "qdr:w"
+    return "qdr:m"
+
+
 # main dork function interacting with serpAPI
 def run_dork(
     # build it up
@@ -79,7 +94,7 @@ def run_dork(
             "google_domain": "google.com",
             "hl": "en",  # english
             "gl": "us",
-            "tbs": f"qdr:h{hours}",  # only results from the last `hours` hours
+            "tbs": time_filter(hours),
             "api_key": os.getenv("SERPAPI_KEY"),  # grab api key
         }
     )
@@ -91,6 +106,8 @@ def run_dork(
     error = data.get("error")
     if error and "hasn't returned any results" not in error:
         return {"success": False, "query": query, "error": f"SerpAPI: {error}"}
+    if error:
+        logger.info(f"SerpAPI returned no results (tbs={time_filter(hours)}): {error}")
 
     organic = data.get("organic_results", [])  # make it usable for db
 
