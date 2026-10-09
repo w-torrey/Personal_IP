@@ -6,7 +6,7 @@ It's meant for security teams that need to keep watch on public information abou
 
 > **Note:** This is my personal fork of IndexPulse, where I try out individual changes and experiments. The main focus right now is turning the AI summary tool into an agentic workflow, so expect it to differ from the original project.
 
-**Live demo:** _link coming soon_. Register any email and password to look around.
+**Live demo:** (https://indexpulse-23p2.onrender.com/). Register any email and password to look around.
 
 ## Features
 
