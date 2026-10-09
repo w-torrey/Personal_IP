@@ -85,6 +85,13 @@ def run_dork(
     )
 
     data = search.get_dict()  # gets results back in dictinoary
+
+    # SerpAPI reports failures (bad key, used-up quota) in an "error" field,
+    # but it also uses that field for a plain empty search, which isn't a failure
+    error = data.get("error")
+    if error and "hasn't returned any results" not in error:
+        return {"success": False, "query": query, "error": f"SerpAPI: {error}"}
+
     organic = data.get("organic_results", [])  # make it usable for db
 
     # extract only the necessary fields

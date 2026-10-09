@@ -51,7 +51,7 @@ def run_all_watchlists():
             saved = save_results(w["id"], result["results"])
             # ai terminal checker
             logger.info(
-                f"Saved: {saved['saved']} new, Skipped: {saved['skipped']} duplicates"
+                f"Query: {result['query']} | Saved: {saved['saved']} new, Skipped: {saved['skipped']} duplicates"
             )
             total_saved += saved["saved"]
             total_skipped += saved["skipped"]
