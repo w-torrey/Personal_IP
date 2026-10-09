@@ -10,6 +10,7 @@ from database import (
 )
 from dork_engine import run_dork
 from summary_engine import generate_summary
+from investigator import investigate
 import logging
 import time
 
@@ -58,7 +59,15 @@ def run_all_watchlists():
                 new_alerts = get_new_alerts(w["id"])
                 if not new_alerts:
                     continue
-                digest = generate_summary("digest", new_alerts)
+                digest = investigate(w, new_alerts)
+                if digest["success"]:
+                    logger.info(f"Investigation {w['label']}: tool calls {digest['tool_calls']}")
+                else:
+                    # fall back to a plain one-call digest so the run still produces a briefing
+                    logger.warning(
+                        f"Investigation failed for {w['label']}, using plain digest: {digest['error']}"
+                    )
+                    digest = generate_summary("digest", new_alerts)
                 if not digest["success"]:
                     logger.error(
                         f"Digest failed to generate for {w['label']}: {digest['error']}"

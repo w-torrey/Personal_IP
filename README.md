@@ -13,7 +13,7 @@ It's meant for security teams that need to keep watch on public information abou
 - **Watchlists:** define targets and the dork operators to apply to them, with a live preview of the generated query
 - **Daily sweeps:** APScheduler runs every watchlist at 8 PM; you can also trigger a run on demand
 - **Alerts:** new results are deduplicated, saved, and shown in the dashboard, where you can mark them as read
-- **AI summaries:** each run produces a digest and dossier through the Anthropic API
+- **AI investigation:** for each watchlist with new results, a Claude agent opens the source pages and checks past alerts and briefings before writing the daily digest; a standing dossier is kept up to date as well
 - **Authentication:** user registration and login with bcrypt-hashed passwords and JWT-protected routes
 
 ## What is a Google Dork?
@@ -144,7 +144,8 @@ The app creates its tables on first start. On the free plan the service sleeps w
 │   ├── database.py                # PostgreSQL data layer
 │   ├── dork_engine.py             # Dork query builder and SerpAPI client
 │   ├── scheduler.py               # Daily and on-demand watchlist sweeps
-│   ├── summary_engine.py          # Anthropic digest and dossier generation
+│   ├── investigator.py            # Agentic digest: reads source pages and checks history before writing
+│   ├── summary_engine.py          # Dossier generation, and the fallback single-call digest
 │   └── .env.example
 ├── docs/
 │   ├── components.md              # Component overview

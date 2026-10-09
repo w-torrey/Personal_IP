@@ -246,7 +246,7 @@ def get_new_alerts(watchlist_id: int):
     with engine.connect() as conn:
         result = conn.execute(
             text("""
-            SELECT r.id, r.title, r.snippet, r.source, r.date_found, r.watchlist_id
+            SELECT r.id, r.title, r.snippet, r.source, r.date_found, r.watchlist_id, r.link
             FROM results r
             JOIN watchlists w ON r.watchlist_id = w.id
             WHERE r.watchlist_id = :watchlist_id AND r.is_new = TRUE
@@ -263,6 +263,59 @@ def get_new_alerts(watchlist_id: int):
             "source": row[3],
             "date_found": row[4],
             "watchlist_id": row[5],
+            "link": row[6],
+        }
+        for row in rows
+    ]
+
+
+# Query for a watchlist's older (already digested) results, used by the investigator to spot repeats
+def get_alert_history(watchlist_id: int, limit: int = 50):
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("""
+            SELECT id, title, snippet, source, link, fetched_at
+            FROM results
+            WHERE watchlist_id = :watchlist_id AND is_new = FALSE
+            ORDER BY fetched_at DESC
+            LIMIT :limit
+        """),
+            {"watchlist_id": watchlist_id, "limit": limit},
+        )
+        rows = result.fetchall()
+    return [
+        {
+            "id": row[0],
+            "title": row[1],
+            "snippet": row[2],
+            "source": row[3],
+            "link": row[4],
+            "fetched_at": str(row[5]),
+        }
+        for row in rows
+    ]
+
+
+# Query for a watchlist's most recent digests, used by the investigator to report what changed
+def get_previous_digests(watchlist_id: int, limit: int = 5):
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("""
+            SELECT headline, narrative, severity, generated_at
+            FROM digests
+            WHERE watchlist_id = :watchlist_id
+            ORDER BY generated_at DESC
+            LIMIT :limit
+        """),
+            {"watchlist_id": watchlist_id, "limit": limit},
+        )
+        rows = result.fetchall()
+    return [
+        {
+            "headline": row[0],
+            "narrative": row[1],
+            "severity": row[2],
+            "generated_at": str(row[3]),
         }
         for row in rows
     ]

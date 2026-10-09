@@ -29,6 +29,11 @@ FastAPI app entry point. Defines all HTTP endpoints and enforces JWT auth on cer
 This is our automated sweep layer, running at 8pm daily using APScheduler, also houses an on-demand run now. For each watchlist: a dork is run, results are deduplicated and saved, and then both a digest and dossier are generated.
 
 
+### investigator.py
+
+Agentic digest generation. For each watchlist with new results, Claude investigates before writing the briefing: it opens the pages behind significant results with Anthropic's web fetch tool and uses two read-only database tools (past results and past digests) to separate new developments from repeats. Returns the same digest schema as summary_engine, which the scheduler falls back to if an investigation fails.
+
+
 ### summary_engine.py
 
 This is our Anthropic API integration layer. Formats alerts, builds a return schema (digests only) to prevent hallucinated alert IDs from the AI model, and executes a handoff and return from Anthropic API for summary generation.
