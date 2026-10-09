@@ -401,7 +401,7 @@ def get_dossiers():
         ]
 
 
-# Query to save digests to db
+# Query to save digests to db, returns the new digest's id
 def save_digest(
     watchlist_id: int,
     headline: str,
@@ -417,6 +417,7 @@ def save_digest(
             text("""
             INSERT INTO digests (watchlist_id, headline, narrative, severity, alert_ids)
             VALUES (:watchlist_id, :headline, :narrative, :severity, CAST(:alert_ids AS jsonb))
+            RETURNING id
                                    """),
             {
                 "watchlist_id": watchlist_id,
@@ -426,8 +427,9 @@ def save_digest(
                 "alert_ids": alerts,
             },
         )
+        digest_id = result.fetchone()[0]
         conn.commit()
-        return result.rowcount
+        return digest_id
 
 
 # Query to serve digests to frontend
@@ -436,7 +438,8 @@ def get_digests():
         result = conn.execute(
             text("""
             SELECT DISTINCT ON (d.watchlist_id)
-            d.watchlist_id, d.narrative, d.alert_ids, w.label, d.headline, d.severity, d.generated_at, w.category
+            d.watchlist_id, d.narrative, d.alert_ids, w.label, d.headline, d.severity, d.generated_at, w.category,
+            d.id, EXISTS (SELECT 1 FROM investigation_traces t WHERE t.digest_id = d.id)
             FROM digests d 
             JOIN watchlists w ON w.id = d.watchlist_id
             ORDER BY d.watchlist_id, d.generated_at DESC
@@ -453,9 +456,59 @@ def get_digests():
                 "severity": row[5],
                 "generated_at": row[6],
                 "category": row[7],
+                "id": row[8],
+                "has_trace": row[9],
             }
             for row in rows
         ]
+
+
+# Saves the step-by-step trace of the investigation that produced a digest
+def save_trace(digest_id: int, investigation: dict):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+            INSERT INTO investigation_traces (digest_id, steps, tool_calls, seconds, input_tokens, output_tokens)
+            VALUES (:digest_id, CAST(:steps AS jsonb), CAST(:tool_calls AS jsonb), :seconds, :input_tokens, :output_tokens)
+        """),
+            {
+                "digest_id": digest_id,
+                "steps": json.dumps(investigation["trace"]),
+                "tool_calls": json.dumps(investigation["tool_calls"]),
+                "seconds": investigation["seconds"],
+                "input_tokens": investigation["input_tokens"],
+                "output_tokens": investigation["output_tokens"],
+            },
+        )
+        conn.commit()
+
+
+# Query for a digest's investigation trace, returns None if it has none (e.g. a fallback digest)
+def get_trace(digest_id: int):
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("""
+            SELECT t.steps, t.tool_calls, t.seconds, t.input_tokens, t.output_tokens, t.created_at,
+                   d.headline, w.label
+            FROM investigation_traces t
+            JOIN digests d ON d.id = t.digest_id
+            JOIN watchlists w ON w.id = d.watchlist_id
+            WHERE t.digest_id = :digest_id
+        """),
+            {"digest_id": digest_id},
+        ).fetchone()
+    if not row:
+        return None
+    return {
+        "steps": row[0],
+        "tool_calls": row[1],
+        "seconds": row[2],
+        "input_tokens": row[3],
+        "output_tokens": row[4],
+        "created_at": str(row[5]),
+        "headline": row[6],
+        "label": row[7],
+    }
 
 
 # Clear flags query to apply to new results after they have been added to digest

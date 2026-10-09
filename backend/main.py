@@ -22,6 +22,8 @@ from database import (
     get_watchlist,
     get_watchlist_alerts,
     save_digest,
+    save_trace,
+    get_trace,
 )
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 from investigator import investigate
@@ -209,6 +211,15 @@ def digests(user: str = Depends(auth.get_current_user)):
 
 
 # serves dossiers
+# serves the step-by-step trace of the investigation behind a digest
+@app.get("/digests/{digest_id}/trace")
+def digest_trace(digest_id: int, user: str = Depends(auth.get_current_user)):
+    trace = get_trace(digest_id)
+    if not trace:
+        raise HTTPException(status_code=404, detail="No investigation trace for this digest")
+    return trace
+
+
 @app.get("/dossiers")
 def dossiers(user: str = Depends(auth.get_current_user)):
     return get_dossiers()
@@ -280,14 +291,16 @@ def investigate_watchlist(watchlist_id: int, user: str = Depends(auth.get_curren
     if not result["success"]:
         raise HTTPException(status_code=502, detail=result["error"])
     digest = result["results"]
-    save_digest(
+    digest_id = save_digest(
         watchlist_id,
         digest["headline"],
         digest["narrative"],
         digest["severity"],
         digest["alert_ids"],
     )
+    save_trace(digest_id, result)
     return {
+        "digest_id": digest_id,
         "digest": digest,
         "tool_calls": result["tool_calls"],
         "seconds": result["seconds"],

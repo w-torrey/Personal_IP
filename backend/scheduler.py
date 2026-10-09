@@ -4,6 +4,7 @@ from database import (
     get_all_watchlists,
     get_watchlist_alerts,
     save_digest,
+    save_trace,
     save_dossier,
     get_new_alerts,
     clear_new_flags,
@@ -80,13 +81,16 @@ def run_all_watchlists():
                 logger.info(
                     f"Digest {w['label']}: {digest.get('seconds')}s, {digest.get('input_tokens')}in/{digest.get('output_tokens')}out tok"
                 )
-                save_digest(
+                digest_id = save_digest(
                     w["id"],
                     digests["headline"],
                     digests["narrative"],
                     digests["severity"],
                     digests["alert_ids"],
                 )
+                # only investigated digests have a trace (not the single-call fallback)
+                if "trace" in digest:
+                    save_trace(digest_id, digest)
                 clear_new_flags([alert["id"] for alert in new_alerts])
 
                 all_alerts = get_watchlist_alerts(w["id"])

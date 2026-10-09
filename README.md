@@ -15,6 +15,7 @@ It's meant for security teams that need to keep watch on public information abou
 3. **Run a sweep.** Click **Run now** to search every watchlist immediately, rather than waiting for the nightly 8 PM run. New results show up as alert cards in their category's column.
 4. **Investigate.** Click **edit** in the **Threat Intelligence** column header to open the watchlist manager, then click **Investigate**. The agent reads the source articles and compares them with earlier results before writing a briefing. This takes a minute or so. When it's done, a line under the watchlist shows how long it took, which tools it used and the headline.
 5. **Read the briefing.** Click the **Threat Intelligence** column header to open its summaries: the latest digest and the running dossier.
+6. **See how it was built.** Under the digest, click **How this was built →** to step through the agent's investigation: what it was thinking, which pages it opened and what it checked.
 
 ### Example watchlist
 
@@ -78,6 +79,17 @@ The agent's final answer must match a fixed schema: a headline, a 2–4 sentence
 - **Grounding:** every statement must come from what it read. Claims that rest only on a snippet it couldn't open are flagged as such.
 - **Cost limits:** at most 5 page fetches per investigation (each capped at 8,000 tokens of content) and 8 rounds of database-tool calls.
 - **Fallbacks:** if an investigation fails, the sweep falls back to a single-call digest, so it always produces a briefing. If Claude's safety checks decline a request, Anthropic retries it on another model.
+
+### Investigation trace
+
+Every investigated digest keeps a step-by-step record of how it was built. In a category's summaries, click **How this was built →** under a digest to see:
+
+- the agent's reasoning at each step (Claude's summarised thinking)
+- each tool it called and with what: the page it opened, or how much history it pulled
+- what came back: the title of each page read, pages that couldn't be opened, and how many past records it checked
+- the time taken, the tokens used, and the briefing it ended with
+
+Digests written by the single-call fallback have no trace, so the button doesn't appear on them.
 
 ### When it runs
 
@@ -209,6 +221,7 @@ The app creates its tables on first start. On the free plan the service sleeps w
 | `POST` | `/monitor` | Run monitoring for a target |
 | `POST` | `/run-now` | Run all watchlists immediately |
 | `POST` | `/watchlist/{id}/investigate` | Run the AI investigator on a watchlist's recent alerts and save the digest |
+| `GET` | `/digests/{id}/trace` | Step-by-step trace of the investigation behind a digest |
 | `GET` | `/alerts` | List alerts |
 | `PATCH` | `/alerts/{id}/read` | Mark an alert as read |
 | `GET` | `/digests` | List generated digests |

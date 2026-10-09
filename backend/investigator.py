@@ -85,11 +85,55 @@ def build_tools(watchlist_id: int):
     return [get_alert_history, get_previous_digests, web_fetch]
 
 
-# Counts tool calls in a message for logging (server tool calls are server_tool_use blocks)
-def count_tool_calls(message, counts: dict):
-    for block in message.content:
-        if block.type in ("tool_use", "server_tool_use"):
-            counts[block.name] = counts.get(block.name, 0) + 1
+# Investigation trace: an ordered list of steps (reasoning, tool calls, tool results) that the
+# dashboard shows as "How this digest was built". Tool calls are also counted for logging.
+class Trace:
+    MAX_TEXT = 2000  # cap on stored reasoning per step
+
+    def __init__(self):
+        self.steps = []
+        self.tool_counts = {}
+        self.tool_names = {}  # tool_use id -> tool name, to label results
+
+    # Records what the model did in one response
+    def record_message(self, message):
+        for block in message.content:
+            if block.type == "thinking" and block.thinking.strip():
+                self.steps.append({"type": "reasoning", "text": block.thinking.strip()[: self.MAX_TEXT]})
+            elif block.type in ("tool_use", "server_tool_use"):
+                self.tool_names[block.id] = block.name
+                self.tool_counts[block.name] = self.tool_counts.get(block.name, 0) + 1
+                self.steps.append({"type": "tool_call", "tool": block.name, "input": block.input})
+            elif block.type == "web_fetch_tool_result":
+                self.steps.append(self.web_fetch_result(block.content))
+
+    # Server tool results arrive in the model's response: either the fetched page or an error
+    @staticmethod
+    def web_fetch_result(content):
+        if content.type != "web_fetch_result":
+            return {"type": "tool_result", "tool": "web_fetch", "ok": False,
+                    "summary": f"Couldn't open the page ({getattr(content, 'error_code', 'error')})"}
+        title = getattr(getattr(content, "content", None), "title", None)
+        return {"type": "tool_result", "tool": "web_fetch", "ok": True,
+                "summary": f"Read: {title or content.url}", "url": content.url}
+
+    # Records the results of our own (database) tools, which the runner sends back to the model
+    def record_tool_response(self, tool_response):
+        for item in tool_response["content"]:
+            if item.get("type") != "tool_result":
+                continue
+            name = self.tool_names.get(item.get("tool_use_id"), "tool")
+            content = item.get("content")
+            if isinstance(content, list):
+                content = "".join(part.get("text", "") for part in content)
+            if item.get("is_error"):
+                self.steps.append({"type": "tool_result", "tool": name, "ok": False, "summary": "Tool error"})
+                continue
+            try:
+                summary = f"{len(json.loads(content))} records returned"
+            except (TypeError, ValueError):
+                summary = "Returned"
+            self.steps.append({"type": "tool_result", "tool": name, "ok": True, "summary": summary})
 
 
 # Runs an investigation for one watchlist's new alerts and returns a digest
@@ -106,7 +150,7 @@ def investigate(watchlist: dict, new_alerts: list[dict]):
         }
     ]
     tools = build_tools(watchlist["id"])
-    tool_counts = {}
+    trace = Trace()
     input_tokens = 0
     output_tokens = 0
     t0 = time.perf_counter()
@@ -121,6 +165,9 @@ def investigate(watchlist: dict, new_alerts: list[dict]):
                 tools=tools,
                 messages=messages,
                 max_iterations=MAX_TOOL_ROUNDS,
+                # thinking is always on for this model; "summarized" returns readable
+                # summaries of it (hidden by default) for the investigation trace
+                thinking={"type": "adaptive", "display": "summarized"},
                 output_config={
                     "effort": "medium",
                     "format": {"type": "json_schema", "schema": build_schema(new_alerts)},
@@ -134,12 +181,13 @@ def investigate(watchlist: dict, new_alerts: list[dict]):
                 last = message
                 input_tokens += message.usage.input_tokens
                 output_tokens += message.usage.output_tokens
-                count_tool_calls(message, tool_counts)
+                trace.record_message(message)
                 # mirror the history so a paused turn can be resumed below
                 messages.append({"role": "assistant", "content": message.content})
                 tool_response = runner.generate_tool_call_response()
                 if tool_response is not None:
                     messages.append(tool_response)
+                    trace.record_tool_response(tool_response)
 
             # the runner ends on a paused server-tool turn instead of resuming it
             if last is None or last.stop_reason != "pause_turn":
@@ -175,5 +223,6 @@ def investigate(watchlist: dict, new_alerts: list[dict]):
         "seconds": round(time.perf_counter() - t0, 2),
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
-        "tool_calls": tool_counts,
+        "tool_calls": trace.tool_counts,
+        "trace": trace.steps,
     }

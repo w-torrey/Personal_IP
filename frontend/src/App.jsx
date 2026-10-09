@@ -622,11 +622,109 @@ function AlertPanel({ alert, onClose }) {
 }
 
 
+// ─── Component: TracePanel ────────────────────────────────────────────────────
+// "How this digest was built": the investigator's steps in order — its reasoning,
+// each tool it called and what came back — opened from a digest in SummaryPanel.
+
+// Plain-English names for the investigator's tools
+const TOOL_LABELS = {
+  web_fetch: "Opened a page",
+  get_alert_history: "Checked past alerts",
+  get_previous_digests: "Checked past briefings",
+};
+
+// One-line description of what a tool call asked for
+function describeToolInput(tool, input) {
+  if (tool === "web_fetch") return input?.url || "";
+  if (input?.limit) return `up to ${input.limit}`;
+  return "";
+}
+
+function TraceStep({ step }) {
+  if (step.type === "reasoning") {
+    return (
+      <div style={{ borderLeft: "2px solid #2a2a38", padding: "2px 0 2px 12px" }}>
+        <p style={{ margin: "0 0 4px", fontSize: 10, color: "#555", letterSpacing: "0.06em" }}>THINKING</p>
+        <p style={{ margin: 0, fontSize: 12, color: "#999", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{step.text}</p>
+      </div>
+    );
+  }
+  if (step.type === "tool_call") {
+    return (
+      <div style={{ background: "#0f0f16", border: "0.5px solid #2a2a38", borderRadius: 8, padding: "8px 12px" }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#7F77DD" }}>{TOOL_LABELS[step.tool] || step.tool}</span>
+        <span style={{ fontSize: 11, color: "#666", marginLeft: 8, fontFamily: "monospace", wordBreak: "break-all" }}>{describeToolInput(step.tool, step.input)}</span>
+      </div>
+    );
+  }
+  // tool_result
+  return (
+    <p style={{ margin: "0 0 0 12px", fontSize: 11, color: step.ok ? "#5DCAA5" : "#D85A30" }}>
+      {step.ok ? "✓" : "✗"}{" "}
+      {step.url ? <a href={step.url} target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>{step.summary}</a> : step.summary}
+    </p>
+  );
+}
+
+function TracePanel({ digestId, onClose }) {
+  const [trace, setTrace] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    authFetch(`${API_BASE}/digests/${digestId}/trace`)
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Couldn't load the trace");
+        if (!cancelled) setTrace(data);
+      })
+      .catch(e => { if (!cancelled) setError(e.message); });
+    return () => { cancelled = true; };
+  }, [digestId]);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: "92vw", maxHeight: "85vh", background: "#13131c", border: "0.5px solid #2a2a38", borderRadius: 16, padding: "24px 28px", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexShrink: 0 }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#e8e6ff" }}>How this digest was built</h2>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#666", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
+        </div>
+
+        {error && <p style={{ color: "#D85A30", fontSize: 13 }}>{error}</p>}
+        {!trace && !error && <p style={{ color: "#555", fontSize: 13 }}>Loading...</p>}
+
+        {trace && (
+          <>
+            {/* Summary: which watchlist, how long, how much tool use */}
+            <p style={{ margin: "0 0 14px", fontSize: 12, color: "#666", flexShrink: 0 }}>
+              {trace.label} · {trace.seconds}s · {(trace.input_tokens + trace.output_tokens).toLocaleString()} tokens ·{" "}
+              {Object.entries(trace.tool_calls || {}).map(([tool, n]) => `${TOOL_LABELS[tool] || tool} ×${n}`).join(", ") || "answered from the snippets alone"}
+            </p>
+
+            <div style={{ overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+              {trace.steps.map((step, i) => <TraceStep key={i} step={step} />)}
+
+              {/* The briefing the investigation ended with */}
+              <div style={{ background: "#18181f", border: "0.5px solid #5DCAA555", borderRadius: 10, padding: "12px 14px", marginTop: 4 }}>
+                <p style={{ margin: "0 0 4px", fontSize: 10, color: "#5DCAA5", letterSpacing: "0.06em" }}>BRIEFING</p>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#e8e6ff", lineHeight: 1.4 }}>{trace.headline}</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ─── Component: SummaryPanel ──────────────────────────────────────────────────
 // Right-side slide-out (mirrors AlertPanel) opened by clicking a category header.
 // Shows every watchlist in that category with its daily digest + running dossier.
 function SummaryPanel({ category, digests, dossiers, onClose }) {
   const accent = CATEGORY_COLORS[category] || CATEGORY_COLORS["Custom"];
+  // Digest whose investigation trace is open, if any
+  const [traceDigestId, setTraceDigestId] = useState(null);
 
   // Narrow both artifact lists to the clicked category.
   const catDigests = digests.filter(d => (d.category || "Custom") === category);
@@ -640,6 +738,10 @@ function SummaryPanel({ category, digests, dossiers, onClose }) {
     byId[d.watchlist_id] = { ...(byId[d.watchlist_id] || { label: d.label }), dossier: d };
   }
   const watchlistSummaries = Object.values(byId);
+
+  if (traceDigestId !== null) {
+    return <TracePanel digestId={traceDigestId} onClose={() => setTraceDigestId(null)} />;
+  }
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400 }}>
@@ -672,6 +774,11 @@ function SummaryPanel({ category, digests, dossiers, onClose }) {
                       </div>
                       <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "#e8e6ff", lineHeight: 1.4 }}>{digest.headline}</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>{digest.narrative}</p>
+                      {digest.has_trace && (
+                        <button onClick={() => setTraceDigestId(digest.id)} style={{ marginTop: 10, background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 6, padding: "5px 10px", color: "#5DCAA5", fontSize: 11, cursor: "pointer" }}>
+                          How this was built →
+                        </button>
+                      )}
                     </div>
                   )}
 
