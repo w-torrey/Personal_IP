@@ -326,7 +326,7 @@ def get_watchlist_alerts(watchlist_id: int):
     with engine.connect() as conn:
         result = conn.execute(
             text("""
-            SELECT r.id, r.title, r.snippet, r.source, r.date_found, r.watchlist_id
+            SELECT r.id, r.title, r.snippet, r.source, r.date_found, r.watchlist_id, r.link
             FROM results r
             JOIN watchlists w ON r.watchlist_id = w.id
             WHERE r.watchlist_id = :watchlist_id
@@ -343,9 +343,22 @@ def get_watchlist_alerts(watchlist_id: int):
             "source": row[3],
             "date_found": row[4],
             "watchlist_id": row[5],
+            "link": row[6],
         }
         for row in rows
     ]
+
+
+# Query for a single watchlist by id, returns None if it doesn't exist
+def get_watchlist(watchlist_id: int):
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT id, label, category, query_params FROM watchlists WHERE id = :id"),
+            {"id": watchlist_id},
+        ).fetchone()
+    if not row:
+        return None
+    return {"id": row[0], "label": row[1], "category": row[2], "query_params": row[3]}
 
 
 # This is the method to save the dossier we generate into our db,

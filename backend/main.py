@@ -19,8 +19,12 @@ from database import (
     get_digests,
     get_dossiers,
     init_db,
+    get_watchlist,
+    get_watchlist_alerts,
+    save_digest,
 )
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
+from investigator import investigate
 import auth
 import os
 
@@ -262,6 +266,36 @@ def login(request: AuthRequest):
 
 
 # Delete wathchlist endpoint
+# Runs the investigator on one watchlist's most recent alerts and saves the digest.
+# Unlike the sweep it doesn't need new alerts, so it can be rerun to test the investigator
+@app.post("/watchlist/{watchlist_id}/investigate")
+def investigate_watchlist(watchlist_id: int, user: str = Depends(auth.get_current_user)):
+    watchlist = get_watchlist(watchlist_id)
+    if not watchlist:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
+    alerts = get_watchlist_alerts(watchlist_id)[:10]
+    if not alerts:
+        raise HTTPException(status_code=400, detail="No alerts to investigate yet, run a sweep first")
+    result = investigate(watchlist, alerts)
+    if not result["success"]:
+        raise HTTPException(status_code=502, detail=result["error"])
+    digest = result["results"]
+    save_digest(
+        watchlist_id,
+        digest["headline"],
+        digest["narrative"],
+        digest["severity"],
+        digest["alert_ids"],
+    )
+    return {
+        "digest": digest,
+        "tool_calls": result["tool_calls"],
+        "seconds": result["seconds"],
+        "input_tokens": result["input_tokens"],
+        "output_tokens": result["output_tokens"],
+    }
+
+
 @app.delete("/watchlist/{watchlist_id}")
 def delete_watchlist(watchlist_id: int, user: str = Depends(auth.get_current_user)):
     deleted = delete_watchlist_db(watchlist_id)

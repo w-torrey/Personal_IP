@@ -337,12 +337,33 @@ function ConfirmRunModal({ onConfirm, onClose }) {
 // Lists all watchlists belonging to that category with Edit and Delete buttons.
 // Delete uses a two-step confirmation (click Delete → click Confirm) to prevent accidents.
 // Clicking Edit swaps this modal out for WatchlistFormModal in edit mode.
-function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
+function ManageWatchlistsModal({ category, watchlists, onClose, onSaved, onRefresh }) {
   const [editingWatchlist, setEditingWatchlist] = useState(null);
   const accent = CATEGORY_COLORS[category];
   const filtered = watchlists.filter(w => (w.category || "Custom") === category);
   const [confirmingId, setConfirmingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null)
+  const [investigatingId, setInvestigatingId] = useState(null);
+  // Last investigation outcome per watchlist id: { ok, text }
+  const [investigations, setInvestigations] = useState({});
+
+  // Runs the investigator on this watchlist's recent alerts and saves a new digest.
+  // Takes a while (it opens source pages), so the button shows progress until it returns.
+  async function handleInvestigate(id) {
+    setInvestigatingId(id);
+    try {
+      const res = await authFetch(`${API_BASE}/watchlist/${id}/investigate`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Investigation failed");
+      const tools = Object.entries(data.tool_calls).map(([name, n]) => `${name} ×${n}`).join(", ") || "no tools";
+      setInvestigations(prev => ({ ...prev, [id]: { ok: true, text: `${data.seconds}s · ${tools} · ${data.digest.headline}` } }));
+      onRefresh();
+    } catch (e) {
+      setInvestigations(prev => ({ ...prev, [id]: { ok: false, text: e.message } }));
+    } finally {
+      setInvestigatingId(null);
+    }
+  }
 
   async function handleDelete(id) {
     setDeletingId(id);
@@ -383,6 +404,9 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
                   {w.query_params?.exclude_sites?.length > 0 && (
                     <p style={{ margin: "3px 0 0", fontSize: 11, color: "#555" }}>excl. {w.query_params.exclude_sites.join(", ")}</p>
                   )}
+                  {investigations[w.id] && (
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: investigations[w.id].ok ? "#5DCAA5" : "#D85A30" }}>{investigations[w.id].text}</p>
+                  )}
                 </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                     {/* Two-step delete: first click shows Confirm/Cancel, second click calls DELETE */}
@@ -402,6 +426,11 @@ function ManageWatchlistsModal({ category, watchlists, onClose, onSaved }) {
                       </>
                     ) : (
                       <>
+                        <button onClick={() => handleInvestigate(w.id)} disabled={investigatingId !== null}
+  style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 6, padding:
+  "5px 12px", color: "#5DCAA5", fontSize: 11, cursor: "pointer", opacity: investigatingId !== null && investigatingId !== w.id ? 0.4 : 1 }}>
+                          {investigatingId === w.id ? "Investigating..." : "Investigate"}
+                        </button>
                         <button onClick={() => { setConfirmingId(null); setEditingWatchlist(w);
   }} style={{ background: "transparent", border: "0.5px solid #2a2a38", borderRadius: 6, padding:
   "5px 12px", color: "#7F77DD", fontSize: 11, cursor: "pointer" }}>
@@ -438,7 +467,7 @@ function Column({ category, alerts, watchlists, loading, onWatchlistSaved, onOpe
   return (
     <div style={{ flex: "1 1 0", minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column", background: "#0f0f16", border: "0.5px solid #1e1e2e", borderRadius: "14px", overflow: "hidden", overflowY: "auto"}}>
       {showManage && (
-        <ManageWatchlistsModal category={category} watchlists={watchlists} onClose={() => setShowManage(false)} onSaved={() => { setShowManage(false); onWatchlistSaved(); }} />
+        <ManageWatchlistsModal category={category} watchlists={watchlists} onClose={() => setShowManage(false)} onSaved={() => { setShowManage(false); onWatchlistSaved(); }} onRefresh={onWatchlistSaved} />
       )}
       {/* Sticky column header — click anywhere on the bar to open this category's summaries */}
       <div onClick={() => onOpenSummaries(category)} style={{ padding: "14px 18px", borderBottom: "0.5px solid #1e1e2e", background: bg, display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 1, cursor: "pointer" }}>
