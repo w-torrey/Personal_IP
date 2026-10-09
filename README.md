@@ -63,7 +63,7 @@ The agent decides for itself which tools to use and how often. A clear-cut resul
 
 | Tool | What it does | Why the agent needs it |
 |------|--------------|------------------------|
-| `web_fetch` | Opens a result's URL and reads the full article. Runs on Anthropic's servers, and can only open URLs already in the conversation. | Snippets are too thin to tell a real incident from a passing mention |
+| `web_fetch` | Opens a result's URL and reads the full article. Runs on Anthropic's servers, and can only open URLs already in the conversation. On long pages it runs a little code to keep only the relevant parts, which shows up as `code_execution` in logs and traces. | Snippets are too thin to tell a real incident from a passing mention |
 | `get_alert_history` | Returns up to 50 of this watchlist's earlier results | Separates new developments from stories already reported |
 | `get_previous_digests` | Returns up to 5 of this watchlist's recent briefings | Lets the briefing say what changed since last time |
 
@@ -118,7 +118,7 @@ A Google Dork is a search query that uses Google's advanced operators to find sp
 | `"quoted phrase"` | Forces an exact match |
 | `-keyword` | Excludes results that contain a keyword |
 
-Queries run through [SerpAPI](https://serpapi.com/), limited to the last 24 hours. Each one runs as a regular Google web search first, where dork operators like `filetype:` and `inurl:` work. If that finds nothing, it's retried as a Google News search. Google's date filter on web search often misses recent news articles, while News indexes them by publish time.
+Queries run through [SerpAPI](https://serpapi.com/), limited to the last 24 hours. Each one runs as a regular Google web search first, where dork operators like `filetype:` and `inurl:` work. If that finds nothing, it's retried as a Google News search. Google's date filter on web search often misses recent news articles, while News indexes them by publish time. The News search leaves out `-site:` exclusions: they make News searches come back empty or fail, and News only covers news publishers anyway.
 
 ## Tech stack
 

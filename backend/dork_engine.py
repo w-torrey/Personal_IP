@@ -98,15 +98,24 @@ def run_dork(
 
     # Regular web search first: it's the only one where dorks like filetype: and inurl: work.
     # Its date filter often finds little or nothing for news topics, so if it comes back
-    # empty, retry as a Google News search, which indexes articles by publish time
+    # empty (or Google gives SerpAPI an unusable page), retry as a Google News search,
+    # which indexes articles by publish time
     data = serpapi_search(params)
-    if data.get("failed"):
+    if data.get("failed") and not data.get("retryable"):
         return {"success": False, "query": query, "error": data["error"]}
     items = data.get("organic_results", [])
     search_type = "web"
 
     if not items:
-        data = serpapi_search({**params, "tbm": "nws"})
+        # -site: exclusions break News searches (empty or failed results), and News only
+        # covers news publishers anyway, so the News query leaves them out
+        query = build_query(
+            keywords=keywords,
+            or_keywords=or_keywords,
+            exclude_keywords=exclude_keywords,
+            include_sites=include_sites,
+        )
+        data = serpapi_search({**params, "q": query, "tbm": "nws"})
         if data.get("failed"):
             return {"success": False, "query": query, "error": data["error"]}
         items = data.get("news_results", [])
@@ -143,12 +152,14 @@ def run_dork(
 
 # Runs one SerpAPI search. SerpAPI reports failures (bad key, used-up quota) in an "error"
 # field, but it also uses that field for a plain empty search, which isn't a failure:
-# real failures are marked with failed=True
+# real failures are marked with failed=True. "Couldn't get valid results" means Google gave
+# SerpAPI a page it couldn't parse, so it's marked retryable: the News search may still work
 def serpapi_search(params: dict) -> dict:
     data = GoogleSearch(params).get_dict()
     error = data.get("error")
     if error and "hasn't returned any results" not in error:
-        return {"error": f"SerpAPI: {error}", "failed": True}
+        return {"error": f"SerpAPI: {error}", "failed": True,
+                "retryable": "couldn't get valid results" in error}
     return data
 
 

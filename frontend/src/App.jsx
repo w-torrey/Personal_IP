@@ -629,6 +629,8 @@ function AlertPanel({ alert, onClose }) {
 // Plain-English names for the investigator's tools
 const TOOL_LABELS = {
   web_fetch: "Opened a page",
+  // web_fetch runs code on Anthropic's side to pull the relevant parts out of long pages
+  code_execution: "Filtered the page for relevant parts",
   get_alert_history: "Checked past alerts",
   get_previous_digests: "Checked past briefings",
 };
