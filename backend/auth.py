@@ -1,4 +1,4 @@
-from passlib.context import CryptContext
+import bcrypt
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, timezone
 import os
@@ -6,26 +6,33 @@ from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-##load_dotenv()
+load_dotenv()
 
-##SECRET_KEY = os.getenv("SECRET_KEY")
+# JWT signing key, must be set in .env (refuse to start without it)
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is not set, add it to backend/.env")
 
-SECRET_KEY = "uNc91u9nUct493qTunvHy9w45"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
+
+# bcrypt only accepts passwords up to 72 bytes
+MAX_PASSWORD_BYTES = 72
 
 
 # password into hash value
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 # verify plaintext with hashed password
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode(), hashed.encode())
+    except ValueError:
+        return False
 
 
 # creates the jwt token for auth

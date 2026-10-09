@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # creeate thread to run in a background simplicity
 scheduler = BackgroundScheduler()
 
-# meant to run all watchlists at once asdf
+# meant to run all watchlists at once
 
 
 def run_all_watchlists():
@@ -109,8 +109,7 @@ def run_all_watchlists():
 
 
 # create a cron job that calls run all watchlists ^^ at 8 PM
-def start_scheduler(interval_hours: int = 24):
-    # interval hours isnt used i just realized so maybe remove
+def start_scheduler():
     scheduler.add_job(run_all_watchlists, "cron", hour=20, minute=0, id="dork_job")
     scheduler.start()
     logger.info("Scheduler started — running daily at 8:00 PM ET")

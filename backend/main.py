@@ -18,6 +18,7 @@ from database import (
     mark_as_read,
     get_digests,
     get_dossiers,
+    init_db,
 )
 from scheduler import start_scheduler, stop_scheduler, run_all_watchlists
 import auth
@@ -26,7 +27,8 @@ import os
 
 @asynccontextmanager  # lifetime manager (found through)
 async def lifespan(app: FastAPI):
-    start_scheduler(interval_hours=24)
+    init_db()
+    start_scheduler()
     yield  # above just start the scheduler and below stop it
     stop_scheduler()
 
@@ -39,16 +41,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# allow thesecross origin resource sharing middlware
+# allow the Vite dev server to call the API (the built frontend is same origin and needs no CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
         "http://localhost:5173",
-        "http://100.65.81.57:8000",
-        "http://10.0.0.214:8000",
-        "http://indexpulse-server:8000",
-        "http://indexpulse-server.local:8000",
+        "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -67,7 +65,6 @@ class DorkRequest(BaseModel):
     include_sites: Optional[list[str]] = None
     exclude_sites: Optional[list[str]] = None
     hours: Optional[int] = 24
-    num_results: Optional[int] = 10
     category: Optional[str] = "Uncategorized"
 
 
@@ -109,7 +106,6 @@ def search(request: DorkRequest, user: str = Depends(auth.get_current_user)):
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         hours=request.hours,
-        num_results=request.num_results,
     )
     # check
     if not result["success"]:
@@ -143,7 +139,6 @@ def monitor(request: DorkRequest, user: str = Depends(auth.get_current_user)):
         include_sites=request.include_sites,
         exclude_sites=request.exclude_sites,
         hours=request.hours,
-        num_results=request.num_results,
     )
     if not result["success"]:
         raise HTTPException(
@@ -203,15 +198,6 @@ def run_now(user: str = Depends(auth.get_current_user)):
     return {"status": "done"}
 
 
-# serve frontend (this came from claude)
-frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
-app.mount(
-    "/assets",
-    StaticFiles(directory=os.path.join(frontend_dist, "assets")),
-    name="assets",
-)
-
-
 # serves digests
 @app.get("/digests")
 def digests(user: str = Depends(auth.get_current_user)):
@@ -222,12 +208,6 @@ def digests(user: str = Depends(auth.get_current_user)):
 @app.get("/dossiers")
 def dossiers(user: str = Depends(auth.get_current_user)):
     return get_dossiers()
-
-
-# in conjuction with above
-@app.get("/{full_path:path}")
-def serve_frontend(full_path: str):
-    return FileResponse(os.path.join(frontend_dist, "index.html"))
 
 
 # if you want to edit the watchlist (hence the put request)
@@ -262,6 +242,8 @@ class AuthRequest(BaseModel):
 def register(request: AuthRequest):
     if "@" not in request.email or "." not in request.email.split("@")[-1]:
         raise HTTPException(status_code=400, detail="Invalid email")
+    if len(request.password.encode()) > auth.MAX_PASSWORD_BYTES:
+        raise HTTPException(status_code=400, detail="Password is too long")
     if get_user_by_email(request.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = auth.hash_password(request.password)
@@ -286,3 +268,18 @@ def delete_watchlist(watchlist_id: int, user: str = Depends(auth.get_current_use
     if not deleted:
         raise HTTPException(status_code=404, detail="Watchlist not found")
     return {"deleted": watchlist_id}
+
+
+# serve the built frontend, keep this last so the catch-all route never shadows an API route
+# skipped when the frontend hasn't been built, so the API still runs (e.g. alongside `npm run dev`)
+frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
+if os.path.isdir(frontend_dist):
+    app.mount(
+        "/assets",
+        StaticFiles(directory=os.path.join(frontend_dist, "assets")),
+        name="assets",
+    )
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(full_path: str):
+        return FileResponse(os.path.join(frontend_dist, "index.html"))

@@ -6,7 +6,21 @@ import json
 load_dotenv()
 
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres@localhost:5432/IndexPulse")
+# some hosts (e.g. Render) hand out postgres:// URLs, which SQLAlchemy doesn't accept
+if DB_URL.startswith("postgres://"):
+    DB_URL = DB_URL.replace("postgres://", "postgresql://", 1)
 engine = create_engine(DB_URL)
+
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "../docs/schema.sql")
+
+
+# Creates any missing tables from docs/schema.sql, run once on startup
+def init_db():
+    with open(SCHEMA_PATH) as f:
+        schema = f.read()
+    with engine.connect() as conn:
+        conn.exec_driver_sql(schema)
+        conn.commit()
 
 
 # Loops through results param and inserts info into results table, dedup logic within SQL query by URL

@@ -47,15 +47,6 @@ NOTE: The frontend was scaffolded using Vite, all raw application code lives in 
 Single file React dashboard style frontend. Renders category board, alert cards, watchlist management menu, AI summary, and login gateway. 
 
 
-## Deployment
-
-
-
-### deploy.yml
-
-Github actions file to enable CI/CD, pulls new pushes from main and rebuilds the frontend and redeploys the FastAPI service.
-
-
 ## Config
 
 

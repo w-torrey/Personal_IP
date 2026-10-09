@@ -6,6 +6,8 @@ It's meant for security teams that need to keep watch on public information abou
 
 > **Note:** This is my personal fork of IndexPulse, where I try out individual changes and experiments. The main focus right now is turning the AI summary tool into an agentic workflow, so expect it to differ from the original project.
 
+**Live demo:** _link coming soon_. Register any email and password to look around.
+
 ## Features
 
 - **Watchlists:** define targets and the dork operators to apply to them, with a live preview of the generated query
@@ -35,25 +37,28 @@ Queries run through [SerpAPI](https://serpapi.com/).
 - **Frontend:** React 19, Vite
 - **External APIs:** SerpAPI (search), Anthropic (summaries)
 
-## Getting started
+## Running locally
+
+IndexPulse runs entirely on your own machine: one Python process serves both the API and the dashboard.
 
 ### Prerequisites
 
 - Python 3.10+
 - Node.js 20.19+ (required by Vite 8)
-- PostgreSQL
+- PostgreSQL, running locally
 - A SerpAPI key and an Anthropic API key
 
-### 1. Database
-
-Create a database and load the schema:
+### 1. Clone and create the database
 
 ```bash
+git clone https://github.com/w-torrey/Personal_IP.git
+cd Personal_IP
 createdb IndexPulse
-psql -d IndexPulse -f docs/schema.sql
 ```
 
-### 2. Backend
+You only need an empty database. The backend creates its tables from `docs/schema.sql` the first time it starts.
+
+### 2. Configure the backend
 
 ```bash
 python -m venv venv
@@ -66,30 +71,51 @@ Fill in `backend/.env`:
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string (defaults to `postgresql://postgres@localhost:5432/IndexPulse`) |
+| `DATABASE_URL` | PostgreSQL connection string, e.g. `postgresql://postgres:yourpassword@localhost:5432/IndexPulse` |
 | `SERPAPI_KEY` | SerpAPI key used for dork searches |
 | `ANTHROPIC_API_KEY` | Anthropic API key used for digests and dossiers |
+| `SECRET_KEY` | Key used to sign login tokens. Required; generate one with `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
 
-### 3. Frontend
+### 3. Build the frontend
 
 ```bash
 cd frontend
 npm install
 npm run build
+cd ..
 ```
 
-The backend serves the built frontend from `frontend/dist`. Before building, set `API_BASE` at the top of `frontend/src/App.jsx` to your backend's address.
-
-For frontend development with hot reload, run `npm run dev` instead.
-
-### 4. Run
+### 4. Start the app
 
 ```bash
 cd backend
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --port 8000
 ```
 
-Open `http://localhost:8000`, register an account, and create your first watchlist.
+Open http://localhost:8000, register an account, and create your first watchlist.
+
+The daily sweep runs at 8 PM while the app is running. Use the dashboard's run button to sweep on demand.
+
+### Frontend development
+
+To work on the frontend with hot reload, keep the backend running and start the Vite dev server in a second terminal:
+
+```bash
+cd frontend
+VITE_API_BASE=http://localhost:8000 npm run dev   # PowerShell: $env:VITE_API_BASE="http://localhost:8000"; npm run dev
+```
+
+Then open http://localhost:5173.
+
+## Deploying to Render
+
+The repo includes a `Dockerfile` and a `render.yaml` blueprint that set up the app and a Postgres database on [Render](https://render.com/).
+
+1. Push the repo to GitHub.
+2. In Render, choose **New > Blueprint** and select the repo.
+3. Enter your `SERPAPI_KEY` and `ANTHROPIC_API_KEY` when prompted. Render generates `SECRET_KEY` and connects the database for you.
+
+The app creates its tables on first start. On the free plan the service sleeps when idle, so the first visit after a while takes up to a minute, and the 8 PM sweep only runs if the service is awake.
 
 ## API
 
@@ -109,19 +135,9 @@ Open `http://localhost:8000`, register an account, and create your first watchli
 | `GET` | `/digests` | List generated digests |
 | `GET` | `/dossiers` | List generated dossiers |
 
-## Deployment
-
-There are two ways to deploy:
-
-- **GitHub Actions:** `.github/workflows/deploy.yml` runs on a self-hosted runner whenever you push to `main`. It pulls the code, rebuilds the frontend, and restarts an `indexpulse` systemd service.
-- **Manual:** `deploy.sh` pulls `main`, rebuilds the frontend, and restarts uvicorn in the background, logging to `deploy.log`.
-
-Both use hard-coded paths under `/home/ipuser/IndexPulse`, so change those to match your server.
-
 ## Project structure
 
 ```
-├── .github/workflows/deploy.yml   # CI deploy workflow
 ├── backend/
 │   ├── main.py                    # FastAPI app, routes, CORS, static file serving
 │   ├── auth.py                    # Password hashing and JWT handling
@@ -132,7 +148,7 @@ Both use hard-coded paths under `/home/ipuser/IndexPulse`, so change those to ma
 │   └── .env.example
 ├── docs/
 │   ├── components.md              # Component overview
-│   ├── schema.sql                 # Database schema
+│   ├── schema.sql                 # Database schema, applied on startup
 │   ├── ERD_2_IndexPulse.png       # Entity relationship diagram
 │   └── SysArch_Index_Pulse.png    # System architecture diagram
 ├── frontend/
@@ -140,7 +156,8 @@ Both use hard-coded paths under `/home/ipuser/IndexPulse`, so change those to ma
 │   ├── index.html
 │   ├── package.json
 │   └── vite.config.js
-├── deploy.sh
+├── Dockerfile                     # Builds the frontend and runs the backend in one image
+├── render.yaml                    # Render blueprint (web service + Postgres)
 └── reqs.txt
 ```
 

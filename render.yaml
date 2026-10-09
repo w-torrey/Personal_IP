@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: indexpulse
+    runtime: docker
+    plan: free
+    healthCheckPath: /docs
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indexpulse-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SERPAPI_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+databases:
+  - name: indexpulse-db
+    databaseName: indexpulse
+    plan: free

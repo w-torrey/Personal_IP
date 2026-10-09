@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 // App version shown in the auth screen footer
 const version = "1.0.2"
 
-// Backend URL — all fetch calls point here
-const API_BASE = "http://100.65.81.57:8000";
+// Backend URL — all fetch calls point here. Empty means same origin (the backend serves
+// the built frontend); set VITE_API_BASE when running the Vite dev server separately.
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 // Decodes a JWT's payload (without verifying signature) to read its exp claim
 // Returns the expiry as epoch milliseconds, or null if the token can't be parsed
