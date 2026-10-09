@@ -67,32 +67,40 @@ def build_schema(alerts: list[dict]):
 # the bulk of this program, determines summary type and then runs Anthropic api query
 def generate_summary(kind: str, alerts: list[dict]):
 
+    # effort controls how much the model thinks (thinking is always on for this model)
+    config = {"effort": "medium"}
     if kind == "digest":
         sys = digest_system_prompt
-        tok = 1000
-        config = {"format": {"type": "json_schema", "schema": build_schema(alerts)}}
+        config["format"] = {"type": "json_schema", "schema": build_schema(alerts)}
     elif kind == "dossier":
         sys = dossier_system_prompt
-        tok = 10000
-        config = None
     else:
         raise ValueError("generation type not defined")
 
     formatted = format_alerts(alerts)
 
-    kwargs = {
-        "model": "claude-opus-4-8",
-        "max_tokens": tok,
-        "system": sys,
-        "messages": [{"role": "user", "content": formatted}],
-    }
-    if config is not None:
-        kwargs["output_config"] = config
     try:
         t0 = time.perf_counter()
-        prompt = client.messages.create(**kwargs)
+        prompt = client.beta.messages.create(
+            model="claude-opus-5-5",
+            # room for the model's thinking as well as the reply
+            max_tokens=16000,
+            system=sys,
+            messages=[{"role": "user", "content": formatted}],
+            output_config=config,
+            # reroute to another model if a safety classifier declines the request
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+        )
         elapsed = time.perf_counter() - t0
-        text = prompt.content[0].text
+        if prompt.stop_reason == "refusal":
+            return {"success": False, "error": "model declined the request"}
+        if prompt.stop_reason != "end_turn":
+            return {"success": False, "error": f"stopped early: {prompt.stop_reason}"}
+        # the response starts with thinking blocks, so take the text block
+        text = next((b.text for b in prompt.content if b.type == "text"), None)
+        if text is None:
+            return {"success": False, "error": "response had no text"}
         # Need that json loads to format the json string into a python dict for handling
         return_result = json.loads(text) if kind == "digest" else text
         return {
@@ -102,5 +110,5 @@ def generate_summary(kind: str, alerts: list[dict]):
             "input_tokens": prompt.usage.input_tokens,
             "output_tokens": prompt.usage.output_tokens,
         }
-    except APIError as error:
-        return {"success": False, "error": str(error)}
+    except (APIError, json.JSONDecodeError) as error:
+        return {"success": False, "error": f"{type(error).__name__}: {error}"}
