@@ -160,7 +160,14 @@ def investigate(watchlist: dict, new_alerts: list[dict]):
             return {"success": False, "error": "investigation finished without a briefing"}
         digest = json.loads(text)
     except (APIError, json.JSONDecodeError) as error:
-        return {"success": False, "error": f"{type(error).__name__}: {error}"}
+        message = f"{type(error).__name__}: {error}"
+        # connection errors wrap the real cause, so name it. Only the type: an invalid
+        # API key header puts the key itself in the cause's message
+        if error.__cause__:
+            message += f" (cause: {type(error.__cause__).__name__})"
+            if type(error.__cause__).__name__ == "LocalProtocolError":
+                message += " - check ANTHROPIC_API_KEY for stray spaces, newlines or quotes"
+        return {"success": False, "error": message}
 
     return {
         "success": True,
