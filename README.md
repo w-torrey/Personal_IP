@@ -10,7 +10,7 @@ It's meant for security teams that need to keep watch on public information abou
 
 ## Quick tour
 
-1. **Sign up.** On the login screen, choose **Sign up** and register with any email and password.
+1. **Sign up.** On the login screen, choose **Sign up** and register with any email and password. (test@guest.com , password guest is a test account for general viewing)
 2. **Add a watchlist.** Click **+ Add watchlist** and fill in the form using the example below. Press **Enter** after each value so it turns into a tag; text left in a box without pressing Enter is ignored. The query preview at the bottom shows the exact search that will be sent.
 3. **Run a sweep.** Click **Run now** to search every watchlist immediately, rather than waiting for the nightly 8 PM run. New results show up as alert cards in their category's column.
 4. **Investigate.** Click **edit** in the **Threat Intelligence** column header to open the watchlist manager, then click **Investigate**. The agent reads the source articles and compares them with earlier results before writing a briefing. This takes a minute or so. When it's done, a line under the watchlist shows how long it took, which tools it used and the headline.
