@@ -37,6 +37,17 @@ CREATE TABLE IF NOT EXISTS digests (
     generated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Step-by-step record of the investigation that produced a digest (reasoning, tool calls, results)
+CREATE TABLE IF NOT EXISTS investigation_traces (
+    digest_id     INTEGER PRIMARY KEY REFERENCES digests(id) ON DELETE CASCADE,
+    steps         JSONB NOT NULL,
+    tool_calls    JSONB,
+    seconds       REAL,
+    input_tokens  INTEGER,
+    output_tokens INTEGER,
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS dossiers (
     watchlist_id INTEGER PRIMARY KEY REFERENCES watchlists(id) ON DELETE CASCADE,
     summary      TEXT NOT NULL,
