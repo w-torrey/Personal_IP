@@ -6,7 +6,85 @@ It's meant for security teams that need to keep watch on public information abou
 
 > **Note:** This is my personal fork of IndexPulse, where I try out individual changes and experiments. The main focus right now is turning the AI summary tool into an agentic workflow, so expect it to differ from the original project.
 
-**Live demo:** (https://indexpulse-23p2.onrender.com/). Register any email and password to look around.
+**Live demo:** [indexpulse-23p2.onrender.com](https://indexpulse-23p2.onrender.com/). Register any email and password to look around. The demo runs on a free plan, so the first visit after a quiet spell can take up to a minute to load.
+
+## Quick tour
+
+1. **Sign up.** On the login screen, choose **Sign up** and register with any email and password.
+2. **Add a watchlist.** Click **+ Add watchlist** and fill in the form using the example below. Press **Enter** after each value so it turns into a tag; text left in a box without pressing Enter is ignored. The query preview at the bottom shows the exact search that will be sent.
+3. **Run a sweep.** Click **Run now** to search every watchlist immediately, rather than waiting for the nightly 8 PM run. New results show up as alert cards in their category's column.
+4. **Investigate.** Click **edit** in the **Threat Intelligence** column header to open the watchlist manager, then click **Investigate**. The agent reads the source articles and compares them with earlier results before writing a briefing. This takes a minute or so. When it's done, a line under the watchlist shows how long it took, which tools it used and the headline.
+5. **Read the briefing.** Click the **Threat Intelligence** column header to open its summaries: the latest digest and the running dossier.
+
+### Example watchlist
+
+This one returns fresh results on almost any day, because ransomware is covered constantly by security news sites:
+
+| Field | Value |
+|-------|-------|
+| Label | `Ransomware attacks` |
+| Category | `Threat Intelligence` |
+| Keywords | `ransomware` |
+| Or keywords | `attack`, `breach`, `leak site` |
+| Exclude keywords | `webinar` |
+| Include sites | `bleepingcomputer.com`, `therecord.media`, `securityweek.com` |
+
+It searches Google for:
+
+```
+"ransomware" -"webinar" ("attack" OR "breach" OR "leak site") (site:bleepingcomputer.com OR site:therecord.media OR site:securityweek.com)
+```
+
+Searches only cover the last 24 hours. If a sweep finds nothing, remove the include sites to search the whole web.
+
+## How the AI investigation works
+
+A Google result is only a title and a one- or two-line snippet, which is usually too little to judge what happened. So rather than summarising snippets in a single call, IndexPulse hands each watchlist's new results to a Claude agent (`backend/investigator.py`) that investigates before it writes.
+
+```
+new alerts (title, URL, snippet)
+        │
+        ▼
+ ┌──────────────── Claude agent ────────────────┐
+ │ 1. Triage: which results matter?             │
+ │ 2. Read: open the important articles         │ ──► web_fetch
+ │ 3. Compare: seen before? what changed?       │ ──► get_alert_history, get_previous_digests
+ │ 4. Write: headline, narrative, severity      │
+ └──────────────────────────────────────────────┘
+        │
+        ▼
+ digest saved to the database and shown on the dashboard
+```
+
+The agent decides for itself which tools to use and how often. A clear-cut result may need nothing beyond its snippet, while an ambiguous one gets opened and checked against history.
+
+### Tools
+
+| Tool | What it does | Why the agent needs it |
+|------|--------------|------------------------|
+| `web_fetch` | Opens a result's URL and reads the full article. Runs on Anthropic's servers, and can only open URLs already in the conversation. | Snippets are too thin to tell a real incident from a passing mention |
+| `get_alert_history` | Returns up to 50 of this watchlist's earlier results | Separates new developments from stories already reported |
+| `get_previous_digests` | Returns up to 5 of this watchlist's recent briefings | Lets the briefing say what changed since last time |
+
+Both database tools are read-only and locked to the watchlist being investigated, so the agent can't read other watchlists.
+
+### Output
+
+The agent's final answer must match a fixed schema: a headline, a 2–4 sentence narrative, a severity of `low`, `medium` or `high`, and the IDs of the alerts it's based on. The alert IDs are restricted to the alerts it was given, so it can't cite results that don't exist. The dashboard reads the same format as before, so no frontend changes were needed.
+
+### Guardrails
+
+- **Untrusted content:** fetched pages and snippets are third-party text, and a page could contain instructions aimed at the model. The system prompt tells the agent to treat them as evidence to assess, never as instructions, and none of its tools can change anything.
+- **Grounding:** every statement must come from what it read. Claims that rest only on a snippet it couldn't open are flagged as such.
+- **Cost limits:** at most 5 page fetches per investigation (each capped at 8,000 tokens of content) and 8 rounds of database-tool calls.
+- **Fallbacks:** if an investigation fails, the sweep falls back to a single-call digest, so it always produces a briefing. If Claude's safety checks decline a request, Anthropic retries it on another model.
+
+### When it runs
+
+- **Nightly sweep:** every watchlist with new results is investigated automatically at 8 PM.
+- **On demand:** the **Investigate** button in the watchlist manager (`POST /watchlist/{id}/investigate`) runs it on a watchlist's 10 most recent alerts, whether or not they're new. It reports how long it took and which tools it used, which makes it handy for testing.
+
+Built with the Anthropic Python SDK's Tool Runner on `claude-opus-5-5`.
 
 ## Features
 
@@ -130,6 +208,7 @@ The app creates its tables on first start. On the free plan the service sleeps w
 | `POST` | `/search` | Run a one-off dork search |
 | `POST` | `/monitor` | Run monitoring for a target |
 | `POST` | `/run-now` | Run all watchlists immediately |
+| `POST` | `/watchlist/{id}/investigate` | Run the AI investigator on a watchlist's recent alerts and save the digest |
 | `GET` | `/alerts` | List alerts |
 | `PATCH` | `/alerts/{id}/read` | Mark an alert as read |
 | `GET` | `/digests` | List generated digests |
