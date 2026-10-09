@@ -111,6 +111,16 @@ def run_dork(
 
     organic = data.get("organic_results", [])  # make it usable for db
 
+    # diagnostics for empty searches: which sections the page did have (e.g. top_stories),
+    # Google's own result count, and the Google URL to open the same search in a browser
+    if not organic:
+        info = data.get("search_information", {})
+        logger.info(
+            f"No organic results | sections: {sorted(k for k in data if k not in ('search_metadata', 'search_parameters'))}"
+            f" | state: {info.get('organic_results_state')} | total: {info.get('total_results')}"
+            f" | google_url: {data.get('search_metadata', {}).get('google_url')}"
+        )
+
     # extract only the necessary fields
     # just aprase out title link snippet source date
     results = []
